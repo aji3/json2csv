@@ -1,0 +1,445 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css">
+  <script src="https://unpkg.com/vue@2.3.2"></script>
+  <style>
+  body{
+    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Hiragino Kaku Gothic ProN,"メイリオ",meiryo,sans-serif;
+  }
+  .header {
+    height: 40px;
+    background-color: #12486A;
+    color: white;
+    text-align: center;
+  }
+  .content{
+    height: calc(100% - 40px);
+  }
+  .column {
+    display: block;
+    width: 50%;
+    float: left;
+    height: 100%;
+  }
+  .row {
+    width: 100%;
+    height: 50%;
+  }
+  textarea.json {
+    width: 100%;
+    height: 100%;
+  }
+  pre.json {
+    width: calc(100% - 1em);
+    height: calc(100% - 1em);
+    overflow: scroll;
+    padding: 1em 0 0 1em;
+    color: #000;
+    background-color: #f6f6f6;
+    font-family: 'MS Gothic', monospace;
+  }
+  .csvtable {
+  }
+  .csvtable td {
+    border: 1px solid black;
+  }
+  .csvtable div {
+    padding: 5px;
+    overflow: hidden;
+    height: 30px;
+  }
+  </style>
+</head>
+<body>
+  <header class="header"><h2 style="font-size: 2em;">JSON to CSV</h2></header>
+  <div id="app" class="content">
+    <div style="height: 100% position: relative;">
+      <div class="row">
+        <x-json :csvdata="csvdata" :w="leftPanelWidth"></x-json>
+        <x-separator :pos="upperMiddleSeparatorPos" h="calc(50% - 20px)" w="5px" top="40px" leftpercent="70%"></x-separator>
+        <x-config :w="rightPanelWidth"></x-config>
+      </div>
+      <div class="row">
+        <x-separator :pos="middleSeparatorPos" h="5px" w="100%" top="calc(50% + 20px)" left="0px"></x-separator>
+        <x-csv :csvdata="csvdata"></x-csv>
+      </div>
+    </div>
+  </div>
+
+
+<script>
+
+function FlattenContext(names) {
+  if (names) {
+    this.names = [].concat(names);
+  } else {
+    this.names = [];
+  }
+}
+FlattenContext.prototype.getNames = function() {
+  return this.names;
+}
+FlattenContext.prototype.push = function(name) {
+  this.names.push(name);
+}
+FlattenContext.prototype.pop = function() {
+  this.names.splice(this.names.length - 1, 1);
+}
+FlattenContext.prototype.currentName = function() {
+  var ret = "";
+  for (var i = 0; i < this.names.length; i++) {
+    var name = this.names[i];
+    if (ret.length > 0) {
+      ret += ".";
+    }
+    ret += name;
+  }
+  return ret;
+}
+
+function flatten(obj, context) {
+  if (!context) {
+    context = new FlattenContext();
+  }
+  if (Array.isArray(obj) ) {
+    const ret = [];
+    obj.forEach(elem => {
+      ret.push(flatten(elem, context));
+    });
+    return ret;
+  } else if (typeof obj === 'object') {
+    var ret = {};
+    for (key in obj) {
+      const value = obj[key];
+      context.push(key);
+      Object.assign(ret, flatten(value, context));
+      context.pop();
+    }
+    return ret;
+  } else {
+    const ret = {};
+    ret[context.currentName()] = obj;
+    return ret;
+  }
+}
+function extract(obj, name) {
+  if (!obj) {
+    return null;
+  }
+  var list = obj[name];
+  if (!list) {
+    return obj;
+  }
+  const ret = [];
+  for (var i = 0; i < list.length; i++) {
+    var elem = list[i];
+    if (typeof elem === 'object') {
+      const retObj = Object.assign({}, obj);
+      delete retObj[name];
+      ret.push(retObj);
+      for (key in elem) {
+        retObj[name + "." + key] = elem[key];
+      }
+    } else {
+      ret.push(elem);
+    }
+
+  }
+  return ret;
+}
+function extractList(list, name) {
+  const ret = [];
+  list.forEach(elem => Array.prototype.push.apply(ret, extract(elem, name)));
+  return ret;
+}
+function getArrayNameList(obj) {
+  const ret = [];
+  for (key in obj) {
+    if (Array.isArray(obj[key])) {
+      ret.push(key);
+    }
+  }
+  return ret;
+}
+function hasArray(obj) {
+  if (!obj || typeof obj !== 'object') {
+    return false;
+  }
+  for (key in obj) {
+    if (Array.isArray(obj[key])) {
+      return true;
+    }
+  }
+  return false;
+}
+function extractChildren(obj) {
+  if (typeof obj !== 'object' || Array.isArray(obj)) {
+    return false;
+  }
+  var extracted = false;
+  for (key in obj) {
+    const child = obj[key];
+    if (hasArray(child)) {
+      var list = extractAll(child);
+      getArrayNameList(child).forEach(childArrayKey => delete child[childArrayKey]);
+      const val = {};
+      val[key] = list;
+      Object.assign(obj, val);
+      extracted = true;
+    } else {
+      extracted = extracted || extractChildren(child);
+    }
+  }
+  return extracted;
+}
+function extractAll(obj) {
+  while (extractChildren(obj));
+  var extractedList = [obj];
+  getArrayNameList(obj).forEach(key => extractedList = extractList(extractedList, key));
+  return extractedList;
+}
+function createSchema(obj) {
+  const ret = [];
+  for(key in obj[0]) {
+    ret.push(key);
+  }
+  ret.sort();
+  return ret;
+}
+Vue.component('x-panel', {
+  props: ['title', 'w', 'h'],
+  template: `
+<div :style="{height: h, position: 'relative', float: 'left', width: w, overflow: 'hidden'}">
+  <slot></slot>
+  <div style="position: absolute; left: calc(100% - 200px); top: 15px; text-align: right; width: 190px;">
+    <label style="background-color: blue; opacity: 0.5; padding: 2px 10px; border-radius: 14px; color: white;">{{title}}</label>
+  </div>
+</div>
+  `
+})
+Vue.component('x-json', {
+  props: ['csvdata', 'w'],
+  data: function() {
+    return {
+      json: null,
+      isTextareaFocused: true,
+    }
+  },
+  template:`
+<x-panel title="JSON" :w="w" h="100%">
+  <textarea id="jsonTextarea" placeholder="JSON" :class="['json',]" v-if="showTextArea" v-model="json" @keyup.ctrl.65="ctrlA" @focus="isTextareaFocused = true" @blur="isTextareaFocused = false"></textarea>
+  <pre class="json" v-if="!showTextArea" @click="focusJsonTextarea"><code @click="isTextareaFocused = true">{{formattedJson}}</code></pre>
+</x-panel>
+  `,
+  watch: {
+    json: function() {
+      if (this.csvdata) {
+        this.csvdata.splice(0, this.csvdata.length);
+        Array.prototype.push.apply(this.csvdata, flatten(extractAll(this.jsonObject)));
+        console.log(this.csvdata);
+      }
+    }
+  },
+  computed: {
+    showTextArea: function() {
+      return this.isTextareaFocused || !this.isValidJson;
+    },
+    jsonObject: function() {
+      try {
+        return JSON.parse(this.json);
+      } catch (exception) {
+        // no operation
+      }
+    },
+    isValidJson: function() {
+      if (this.json == null) {
+        return false;
+      }
+      try {
+        JSON.parse(this.json);
+        return true;
+      } catch (exception) {
+        console.log(exception);
+        return false;
+      }
+    },
+    formattedJson: function() {
+      if (!this.isValidJson) {
+        return "";
+      }
+      const TAB = "  ";
+      var ret = "";
+      var indent = "";
+      for (var i = 0; i < this.json.length; i++) {
+        var c = this.json[i];
+        if (c == '{' || c == '[') {
+          indent += TAB;
+          ret += c + '\r\n' + indent;
+        } else if (c == '}' || c == ']') {
+          indent = indent.substring(0, indent.length - 2);
+          ret += '\r\n' + indent + c;
+        } else if (c == ',') {
+          ret += c + '\r\n' + indent;
+        } else if (c == '\r' || c == '\n') {
+
+        } else {
+          ret += c;
+        }
+      }
+      console.log(ret);
+      return ret.replace(/^[\s\n\r]*/, '');
+    },
+  },
+  methods: {
+    ctrlA: function() {
+      console.log('test');
+    },
+    focusJsonTextarea: function() {
+      this.isTextareaFocused = true;
+      Vue.nextTick(function() {
+        document.getElementById('jsonTextarea').focus();
+      })
+    },
+  }
+})
+Vue.component('x-csv', {
+  props: ['csvdata'],
+  template:`
+<x-panel title="CSV" w="100%" h="100%">
+  <div style="overflow: scroll; width: calc(100% - 2em); height: calc(100% - 2em); padding: 1em;">
+    <table class="csvtable">
+      <thead>
+        <tr>
+          <td v-for="head in schema">
+            <div>
+            {{head}}
+            </div>
+          </td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="data in filteredData">
+          <td v-for="head in schema">
+            <div>
+              <span>{{data[head]}}</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <a id="download" href="#" download="test.csv" @click="download">ダウンロード</a>
+  </div>
+</x-panel>
+  `,
+  computed: {
+    schema: function() {
+      return createSchema(this.csvdata)
+    },
+    filteredData: function() {
+      return this.csvdata.filter((element, index) => index < 8);
+    },
+  },
+  methods: {
+    download: function() {
+      var bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+      var blob = new Blob([bom].concat(this.convertToString(this.csvdata, this.schema)), { "type" : "text/csv" });
+      document.getElementById("download").href = window.URL.createObjectURL(blob);
+    },
+    convertToString: function(list, headers) {
+      const ret = [];
+      headers.forEach(header => ret.push(header + ','));
+      ret.push('\r\n');
+      // list.forEach(data => ret.push(JSON.stringify(data).replace(/^{,?/, '').replace(/}$/, '') + '\r\n') );
+      list.forEach(data => {
+        headers.forEach(header => {
+          var str = data[header];
+          if (typeof str === 'string') {
+            str = '"' + str.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(/"/g, '""') + '"';
+          }
+          ret.push(str + ',')
+        });
+        ret.push('\r\n');
+      });
+      return ret;
+    }
+  }
+})
+Vue.component('x-config', {
+  props: ['w'],
+  template: `
+<x-panel title="Configuration" :w="w" h="50%">
+
+</x-panel>
+  `
+})
+Vue.component('x-separator', {
+  props: ['pos', 'direction', 'w', 'h', 'top', 'left', 'leftpercent'],
+  data: function() {
+    return {
+      mouseDownPos: {x: 0, y: 0}
+    }
+  },
+  template: `
+  <div :style="[{backgroundColor: 'gray', height: h, width: w, position: 'absolute', top: top, 'left': leftValue,}]" @mousedown="startDrag" ></div>
+  `,
+  computed: {
+    leftValue: function() {
+      if (this.left) {
+        return this.left - this.pos.x;
+      } else if (this.leftpercent) {
+        return `calc(${this.leftpercent} - ${this.pos.x}px)`;
+      } else {
+        return '50%';
+      }
+    }
+  },
+  methods: {
+    startDrag: function(e) {
+      // console.log("startDrag");
+      this.mouseDownPos.x = e.x + this.pos.x;
+      this.mouseDownPos.y = e.y + this.pos.y;
+    },
+    onDrag: function(e) {
+      if (this.mouseDownPos.x) {
+        // console.log("onDrag");
+        this.pos.x = this.mouseDownPos.x - e.x;
+        this.pos.y = this.mouseDownPos.y - e.y;
+
+        // console.log(this.left);
+      }
+    },
+    stopDrag: function(e) {
+      // console.log("stopDrag");
+      this.mouseDownPos.x = null;
+      this.mouseDownPos.y = null;
+    }
+  },
+  created: function() {
+    document.addEventListener('mousemove', this.onDrag, false);
+    document.addEventListener('mouseup', this.stopDrag, false);
+  }
+})
+var app = new Vue({
+  el: '#app',
+  data: {
+    csvdata: [],
+    upperMiddleSeparatorPos: {x: 0, y: 0},
+    middleSeparatorPos: {x: 0, y: 0},
+  },
+  computed: {
+    leftPanelWidth: function() {
+      return `calc(70% - ${this.upperMiddleSeparatorPos.x}px)`;
+    },
+    rightPanelWidth: function() {
+      return `calc(30% + ${this.upperMiddleSeparatorPos.x}px)`;
+    },
+    topHight: function() {
+      return 'calc(50% - 20px)';
+    }
+  }
+});
+</script>
+
+</body>
+</html>
