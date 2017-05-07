@@ -3,9 +3,12 @@
   <meta charset="utf-8">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css">
   <script src="https://unpkg.com/vue@2.3.2"></script>
+
+
   <style>
   body{
-    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica Neue,Hiragino Kaku Gothic ProN,"メイリオ",meiryo,sans-serif;
+    font-family: "Helvetica Neue", -apple-system,BlinkMacSystemFont,Segoe UI,Hiragino Kaku Gothic ProN,"メイリオ",meiryo,sans-serif;
+    /*font-family: "Helvetica Neue", Helvetica, Arial, "游ゴシック体", "Yu Gothic", YuGothic, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif*/
   }
   .header {
     height: 40px;
@@ -24,7 +27,6 @@
   }
   .row {
     width: 100%;
-    height: 50%;
   }
   textarea.json {
     width: 100%;
@@ -39,15 +41,52 @@
     background-color: #f6f6f6;
     font-family: 'MS Gothic', monospace;
   }
-  .csvtable {
+  .btn {
+    display: inline-block;
+    background-color: #0275d8;
+    color: white;
+    padding: 10px 25px;
+    border-radius: 20px;
+    text-align: center;
   }
-  .csvtable td {
-    border: 1px solid black;
+  .datatable {
+	  border-collapse: collapse;
+    font-size: 0.8em;
   }
-  .csvtable div {
-    padding: 5px;
+  .datatable th,.datatable td {
+  	border: 1px solid rgb(221, 221, 221);
+    padding: 5px 10px;
+    vertical-align: middle;
+    word-break: keep-all;
+    white-space: nowrap;
+    max-width: 150px;
     overflow: hidden;
-    height: 30px;
+  }
+  .datatable tr:nth-child(even) {
+  	background: #f9f9f9;
+  }
+  .datatable tr:hover {
+  	background: #ff0;
+  }
+  .paginate {
+    letter-spacing: -.4em;
+  }
+  .paginate li:first-child {
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+  }
+  .paginate li:last-child {
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+  }
+  .paginate > li{
+    display: inline-block;
+    letter-spacing: normal;
+  }
+  .paginate_button {
+    padding: 8px 12px;
+    border: 1px solid rgb(221, 221, 221);
+    margin: 0px;
   }
   </style>
 </head>
@@ -55,15 +94,15 @@
   <header class="header"><h2 style="font-size: 2em;">JSON to CSV</h2></header>
   <div id="app" class="content">
     <div style="height: 100% position: relative;">
-      <div class="row">
-        <x-json :csvdata="csvdata" :w="leftPanelWidth"></x-json>
-        <x-separator :pos="upperMiddleSeparatorPos" h="calc(50% - 20px)" w="5px" top="40px" leftpercent="70%"></x-separator>
-        <x-config :w="rightPanelWidth"></x-config>
-      </div>
-      <div class="row">
-        <x-separator :pos="middleSeparatorPos" h="5px" w="100%" top="calc(50% + 20px)" left="0px"></x-separator>
+      <x-row :h="'50% - ' + middleSeparatorOffset.y + 'px'">
+        <x-json :csvdata="csvdata" :w="leftPanelWidth" ></x-json>
+        <x-separator :offset="upperMiddleSeparatorOffset" direction="horizontal" :h="'50% - 18px - ' + middleSeparatorOffset.y + 'px'" w="5px" top="40px" left="70%"></x-separator>
+        <x-config :w="rightPanelWidth" ></x-config>
+      </x-row>
+      <x-row :h="'50% + ' + middleSeparatorOffset.y + 'px'">
+        <x-separator :offset="middleSeparatorOffset" direction="vertical" h="5px" w="100%" top="50% + 20px" left="0px"></x-separator>
         <x-csv :csvdata="csvdata"></x-csv>
-      </div>
+      </x-row>
     </div>
   </div>
 
@@ -199,6 +238,11 @@ function extractAll(obj) {
   getArrayNameList(obj).forEach(key => extractedList = extractList(extractedList, key));
   return extractedList;
 }
+function extractAllList(obj) {
+  const ret = [];
+  obj.forEach(elem => Array.prototype.push.apply(ret, extractAll(elem)));
+  return ret;
+}
 function createSchema(obj) {
   const ret = [];
   for(key in obj[0]) {
@@ -207,19 +251,39 @@ function createSchema(obj) {
   ret.sort();
   return ret;
 }
-Vue.component('x-panel', {
-  props: ['title', 'w', 'h'],
+Vue.component('x-row', {
+  props: ['h'],
   template: `
-<div :style="{height: h, position: 'relative', float: 'left', width: w, overflow: 'hidden'}">
+<div class="row" :style="{height: heightValue}">
+  <slot></slot>
+</div>
+  `,
+  computed: {
+    heightValue: function() {
+      return `calc(${this.h})`
+    }
+  }
+})
+
+Vue.component('x-panel', {
+  props: ['title', 'w', 'h',],
+  template: `
+<div :style="{height: h, position: 'relative', float: 'left', width: w, overflow: 'hidden'}" @mouseover="mouseover">
   <slot></slot>
   <div style="position: absolute; left: calc(100% - 200px); top: 15px; text-align: right; width: 190px;">
     <label style="background-color: blue; opacity: 0.5; padding: 2px 10px; border-radius: 14px; color: white;">{{title}}</label>
   </div>
 </div>
-  `
+  `,
+  methods: {
+    mouseover: function() {
+      this.$emit('mouseover');
+    }
+  },
 })
+
 Vue.component('x-json', {
-  props: ['csvdata', 'w'],
+  props: ['csvdata', 'w',],
   data: function() {
     return {
       json: null,
@@ -227,7 +291,7 @@ Vue.component('x-json', {
     }
   },
   template:`
-<x-panel title="JSON" :w="w" h="100%">
+<x-panel title="JSON" :w="w" h="100%" v-on:mouseover="mouseover">
   <textarea id="jsonTextarea" placeholder="JSON" :class="['json',]" v-if="showTextArea" v-model="json" @keyup.ctrl.65="ctrlA" @focus="isTextareaFocused = true" @blur="isTextareaFocused = false"></textarea>
   <pre class="json" v-if="!showTextArea" @click="focusJsonTextarea"><code @click="isTextareaFocused = true">{{formattedJson}}</code></pre>
 </x-panel>
@@ -236,8 +300,12 @@ Vue.component('x-json', {
     json: function() {
       if (this.csvdata) {
         this.csvdata.splice(0, this.csvdata.length);
-        Array.prototype.push.apply(this.csvdata, flatten(extractAll(this.jsonObject)));
-        console.log(this.csvdata);
+        if (Array.isArray(this.jsonObject)) {
+          Array.prototype.push.apply(this.csvdata, flatten(extractAllList(this.jsonObject)));
+        } else {
+          Array.prototype.push.apply(this.csvdata, flatten(extractAll(this.jsonObject)));
+        }
+        // console.log(this.csvdata);
       }
     }
   },
@@ -287,7 +355,7 @@ Vue.component('x-json', {
           ret += c;
         }
       }
-      console.log(ret);
+      // console.log(ret);
       return ret.replace(/^[\s\n\r]*/, '');
     },
   },
@@ -301,13 +369,20 @@ Vue.component('x-json', {
         document.getElementById('jsonTextarea').focus();
       })
     },
+    mouseover: function() {
+      console.log("JSON");
+    }
   }
 })
 Vue.component('x-csv', {
   props: ['csvdata'],
   template:`
+<x-table title="CSV" w="100%" h="100%" :data="csvdata" >
+  <a slot="footer" class="btn" style="position: absolute; z-index: 300; top: calc(100% - 80px); left: calc(50% - 100px); width: 150px; opacity: 0.7;" id="download" href="#" download="test.csv" @click="download">ダウンロード</a>
+</x-table>
+<!--
 <x-panel title="CSV" w="100%" h="100%">
-  <div style="overflow: scroll; width: calc(100% - 2em); height: calc(100% - 2em); padding: 1em;">
+  <div style="overflow: scroll; width: calc(100% - 1em); height: calc(100% - 1em); padding: .5em;">
     <table class="csvtable">
       <thead>
         <tr>
@@ -328,9 +403,10 @@ Vue.component('x-csv', {
         </tr>
       </tbody>
     </table>
-    <a id="download" href="#" download="test.csv" @click="download">ダウンロード</a>
+
   </div>
 </x-panel>
+-->
   `,
   computed: {
     schema: function() {
@@ -366,47 +442,64 @@ Vue.component('x-csv', {
   }
 })
 Vue.component('x-config', {
-  props: ['w'],
+  props: ['w', 'mouseover'],
   template: `
-<x-panel title="Configuration" :w="w" h="50%">
-
+<x-panel title="Configuration" :w="w" h="50%" :mouseover="mouseover">
+  Configuration will be implemented later..
 </x-panel>
   `
 })
 Vue.component('x-separator', {
-  props: ['pos', 'direction', 'w', 'h', 'top', 'left', 'leftpercent'],
+  props: ['offset', 'direction', 'w', 'h', 'top', 'left',],
   data: function() {
     return {
       mouseDownPos: {x: 0, y: 0}
     }
   },
   template: `
-  <div :style="[{backgroundColor: 'gray', height: h, width: w, position: 'absolute', top: top, 'left': leftValue,}]" @mousedown="startDrag" ></div>
+  <div :style="[{backgroundColor: 'gray', height: heightValue, width: w, position: 'absolute', zIndex: 200, top: topValue, 'left': leftValue,}]" @mousedown="startDrag" ></div>
   `,
   computed: {
     leftValue: function() {
-      if (this.left) {
-        return this.left - this.pos.x;
-      } else if (this.leftpercent) {
-        return `calc(${this.leftpercent} - ${this.pos.x}px)`;
+      if (this.direction === 'vertical') {
+        return `calc(${this.left})`;
       } else {
-        return '50%';
+        if (this.left) {
+          return `calc(${this.left} - ${this.offset.x}px)`;
+        } else {
+          return '50%';
+        }
       }
+    },
+    topValue: function() {
+      if (this.direction === 'horizontal') {
+        return `calc(${this.top})`;
+      } else {
+        if (this.top) {
+          return `calc(${this.top} - ${this.offset.y}px)`;
+        } else {
+          return '50%';
+        }
+      }
+    },
+    heightValue: function() {
+      return `calc(${this.h})`;
+    },
+    widthValue: function() {
+      return `calc(${this.w})`;
     }
   },
   methods: {
     startDrag: function(e) {
       // console.log("startDrag");
-      this.mouseDownPos.x = e.x + this.pos.x;
-      this.mouseDownPos.y = e.y + this.pos.y;
+      this.mouseDownPos.x = e.x + this.offset.x;
+      this.mouseDownPos.y = e.y + this.offset.y;
     },
     onDrag: function(e) {
       if (this.mouseDownPos.x) {
         // console.log("onDrag");
-        this.pos.x = this.mouseDownPos.x - e.x;
-        this.pos.y = this.mouseDownPos.y - e.y;
-
-        // console.log(this.left);
+        this.offset.x = this.mouseDownPos.x - e.x;
+        this.offset.y = this.mouseDownPos.y - e.y;
       }
     },
     stopDrag: function(e) {
@@ -420,23 +513,194 @@ Vue.component('x-separator', {
     document.addEventListener('mouseup', this.stopDrag, false);
   }
 })
+
+
+
+Vue.component('x-table', {
+  props: ['data', 'definitions', 'title', 'w', 'h'],
+  data: function() {
+    return {
+      rowsPerPage: 10,
+      rowsPerPageOptions: [5, 10, 25, 50,],
+      currentPage: 0,
+      filterValue: "",
+      footerScrollLeft: 0,
+    }
+  },
+  template: `
+  <x-panel :title="title" :w=w :h=h>
+    <slot name="header"></slot>
+    <div style="margin: 10px 5px; width: calc(100% - 5px); height: 100%; overflow: scroll; position: relative;" @scroll="onscroll">
+      <div class="row" :style="{position: 'absolute', left: footerScrollLeft + 'px'}">
+        <div style="display: inline-block; width: 30%;">
+          <div style="width: 100%;">
+            <label>Show
+              <select v-model="rowsPerPage" class="form-control input-sm">
+                <option v-for="val in rowsPerPageOptions" :value="val">{{val}}</option>
+              </select>
+            entries</label>
+          </div>
+        </div>
+        <div style="display: inline-block; width: 30%; text-align: right;">
+          <div style="width: 100%;">
+            <label>Search:<input type="search" class="form-control input-sm" v-model="filterValue" ></label>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="margin-top: 30px;">
+        <div style="width: auto;">
+          <table class="datatable">
+            <thead>
+              <tr role="row">
+                <th v-for="prop in properties" >{{prop.key}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="d in filteredData" role="row">
+                <td v-for="prop in properties" :title="d[prop.key]">{{d[prop.key]}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="row" :style="{position: 'absolute', left: footerScrollLeft + 'px', 'margin-top': '5px'}">
+        <div style="display: inline-block; width: 48%;">
+          <div style="width: 100%;">Showing {{showingFrom}} to {{showingTo}} of {{this.data.length}} entries</div>
+        </div>
+        <div style="display: inline-block; width: 48%;">
+          <div style="text-align: right;">
+            <ul class="paginate">
+              <li :class="['paginate_button', {disabled: currentPage === 0}]"><a @click="previousPage">Previous</a></li>
+              <li v-for="number in pageList" class="paginate_button active"><a>{{number}}</a></li>
+              <li :class="['paginate_button', {disabled: !hasNext}]"><a @click="nextPage">Next</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <slot name="footer"></slot>
+  </x-panel>
+  `,
+  computed: {
+    properties: function() {
+      const properties = [];
+      // console.log(this.definitions);
+      if (!this.definitions) {
+        if (this.data && this.data.length > 0) {
+          for(key in this.data[0]) {
+            properties.push({key});
+          }
+        }
+        return properties;
+      }
+      this.definitions.forEach(def => {
+        for (key in def.properties) {
+          properties.push({key});
+        }
+      })
+      return properties;
+    },
+    showingFrom: function() {
+      return this.currentPage * this.rowsPerPage + 1;
+    },
+    showingTo: function() {
+      if (!this.data) {
+        return 0;
+      }
+      const index = (this.currentPage + 1) * this.rowsPerPage;
+      if (this.data.length >= index) {
+        return index;
+      } else {
+        return this.data.length;
+      }
+    },
+    numOfPages: function() {
+      if (this.data.length % this.rowsPerPage === 0) {
+        return Math.floor(this.data.length / this.rowsPerPage);
+      } else {
+        return Math.floor(this.data.length / this.rowsPerPage + 1);
+      }
+    },
+    pageList: function() {
+      const pageList = [];
+      const len = this.numOfPages;
+      for (var i = 0; i < len; i++) {
+        pageList.push(i + 1);
+      }
+      return pageList;
+    },
+    hasNext: function() {
+      return this.numOfPages > this.currentPage + 1;
+    },
+    filteredData: function() {
+      var list = [].concat(this.data);
+      if (this.filterValue && this.filterValue.length > 0) {
+        list = this.filterByString(list, this.filterValue);
+      }
+      return this.paginate(list);
+    }
+  },
+  methods: {
+    onscroll: function(e) {
+      this.footerScrollLeft = e.srcElement.scrollLeft;
+    },
+    previousPage: function() {
+      if (this.currentPage > 0) {
+        this.currentPage--;
+      }
+    },
+    nextPage: function() {
+      if (this.hasNext) {
+        this.currentPage = this.currentPage + 1;
+      }
+    },
+    filterByString: function(list, str) {
+      return list.filter(elem => JSON.stringify(elem).indexOf(str) >= 0);
+    },
+    paginate: function(list) {
+      var dataFrom = this.currentPage * this.rowsPerPage;
+      var dataTo = (this.currentPage + 1) * this.rowsPerPage;
+      if (list.length < dataFrom) {
+        dataFrom = list.length;
+      }
+      if (list.length < dataTo) {
+        dataTo = list.length;
+      }
+      return list.slice(dataFrom, dataTo);
+    }
+  }
+})
+
+
 var app = new Vue({
   el: '#app',
   data: {
     csvdata: [],
-    upperMiddleSeparatorPos: {x: 0, y: 0},
-    middleSeparatorPos: {x: 0, y: 0},
+    upperMiddleSeparatorOffset: {x: 0, y: 0},
+    middleSeparatorOffset: {x: 0, y: 0},
   },
   computed: {
     leftPanelWidth: function() {
-      return `calc(70% - ${this.upperMiddleSeparatorPos.x}px)`;
+      return `calc(70% - ${this.upperMiddleSeparatorOffset.x}px)`;
     },
     rightPanelWidth: function() {
-      return `calc(30% + ${this.upperMiddleSeparatorPos.x}px)`;
+      return `calc(30% + ${this.upperMiddleSeparatorOffset.x}px)`;
     },
     topHight: function() {
       return 'calc(50% - 20px)';
     }
+  },
+  methods: {
+    // focusJsonPanel: function() {
+    //   console.log("sss");
+    //   upperMiddleSeparatorOffset.x = 200;
+    //   middleSeparatorOffset.y = 100;
+    // },
+    // focusConfigPanel: function() {
+    //   console.log("xxx");
+    //   upperMiddleSeparatorOffset.x = -200;
+    //   middleSeparatorOffset.y = 100;
+    // },
   }
 });
 </script>
