@@ -1,3 +1,4 @@
+
 <html>
 <head>
   <meta charset="utf-8">
@@ -212,6 +213,8 @@ function hasArray(obj) {
   }
   return false;
 }
+
+/*
 function extractChildren(obj) {
   if (typeof obj !== 'object' || Array.isArray(obj)) {
     return false;
@@ -219,23 +222,38 @@ function extractChildren(obj) {
   var extracted = false;
   for (key in obj) {
     const child = obj[key];
-    if (hasArray(child)) {
-      var list = extractAll(child);
-      getArrayNameList(child).forEach(childArrayKey => delete child[childArrayKey]);
-      const val = {};
-      val[key] = list;
-      Object.assign(obj, val);
-      extracted = true;
+    if (Array.isArray(child)) {
+      console.log(child);
+      child.forEach(elem => {while(extractChildren(elem));});
     } else {
-      extracted = extracted || extractChildren(child);
+      if (hasArray(child)) {
+        var list = extractAll(child);
+        getArrayNameList(child).forEach(childArrayKey => delete child[childArrayKey]);
+        const val = {};
+        val[key] = list;
+        Object.assign(obj, val);
+        extracted = true;
+      } else {
+        extracted = extracted || extractChildren(child);
+      }
     }
   }
   return extracted;
 }
+*/
+
 function extractAll(obj) {
-  while (extractChildren(obj));
+  //while (extractChildren(obj));
   var extractedList = [obj];
-  getArrayNameList(obj).forEach(key => extractedList = extractList(extractedList, key));
+  //console.log(getArrayNameList(obj));
+  var extracted = false;
+  getArrayNameList(obj).forEach(key => {
+    var tmp = obj[key];
+    if (hasArray(obj)) {
+      extractedList = extractList(extractedList, key);
+      extracted = true;
+    }
+  });
   return extractedList;
 }
 function extractAllList(obj) {
@@ -243,6 +261,28 @@ function extractAllList(obj) {
   obj.forEach(elem => Array.prototype.push.apply(ret, extractAll(elem)));
   return ret;
 }
+
+function extractAll2(list) {
+  var extractedList = [];
+  var extracted = false;
+  list.forEach(obj => {
+    if (hasArray(obj)) {
+      getArrayNameList(obj).forEach(key => {
+        var tmp = obj[key];
+        if (Array.isArray(tmp)) {
+          extractedList = extractedList.concat(extract(obj, key));
+          extracted = true;
+        }
+      });
+    }
+  });
+  if (extracted) {
+    list.splice(0, list.length);
+    Array.prototype.push.apply(list, extractedList);  
+  }
+  return extracted;
+}
+
 function createSchema(obj) {
   const ret = [];
   for(key in obj[0]) {
@@ -301,9 +341,14 @@ Vue.component('x-json', {
       if (this.csvdata) {
         this.csvdata.splice(0, this.csvdata.length);
         if (Array.isArray(this.jsonObject)) {
-          Array.prototype.push.apply(this.csvdata, flatten(extractAllList(this.jsonObject)));
+          //Array.prototype.push.apply(this.csvdata, flatten(extractAllList(this.jsonObject)));
+          while(extractAll2(this.jsonObject));
+          Array.prototype.push.apply(this.csvdata, flatten(this.jsonObject));
         } else {
-          Array.prototype.push.apply(this.csvdata, flatten(extractAll(this.jsonObject)));
+          //Array.prototype.push.apply(this.csvdata, flatten(extractAll(this.jsonObject)));
+          var list = [this.jsonObject];
+          while(extractAll2(list));
+          Array.prototype.push.apply(this.csvdata, flatten(list));
         }
         // console.log(this.csvdata);
       }
@@ -378,7 +423,7 @@ Vue.component('x-csv', {
   props: ['csvdata'],
   template:`
 <x-table title="CSV" w="100%" h="100%" :data="csvdata" >
-  <a slot="footer" class="btn" style="position: absolute; z-index: 300; top: calc(100% - 80px); left: calc(50% - 100px); width: 150px; opacity: 0.7;" id="download" href="#" download="test.csv" @click="download">ダウンロード</a>
+  <a slot="footer" class="btn" style="position: absolute; z-index: 300; top: calc(100% - 80px); left: calc(50% - 100px); width: 150px; opacity: 0.7;" id="download" href="#" download="test.csv" @click="download">DOWNLOAD</a>
 </x-table>
 <!--
 <x-panel title="CSV" w="100%" h="100%">
@@ -530,7 +575,7 @@ Vue.component('x-table', {
   template: `
   <x-panel :title="title" :w=w :h=h>
     <slot name="header"></slot>
-    <div style="margin: 10px 5px; width: calc(100% - 5px); height: 100%; overflow: scroll; position: relative;" @scroll="onscroll">
+    <div style="margin: 10px 5px; width: calc(100% - 5px); height: calc(100% - 10px); overflow: scroll; position: relative;" @scroll="onscroll">
       <div class="row" :style="{position: 'absolute', left: footerScrollLeft + 'px'}">
         <div style="display: inline-block; width: 30%;">
           <div style="width: 100%;">
