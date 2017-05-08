@@ -188,11 +188,6 @@ function extract(obj, name) {
   }
   return ret;
 }
-function extractList(list, name) {
-  const ret = [];
-  list.forEach(elem => Array.prototype.push.apply(ret, extract(elem, name)));
-  return ret;
-}
 function getArrayNameList(obj) {
   const ret = [];
   for (key in obj) {
@@ -210,72 +205,42 @@ function hasArray(obj) {
     if (Array.isArray(obj[key])) {
       return true;
     }
+    if (hasArray(obj[key])) {
+      return true;
+    }
   }
   return false;
 }
 
-/*
-function extractChildren(obj) {
-  if (typeof obj !== 'object' || Array.isArray(obj)) {
-    return false;
-  }
+function extractAll2(list) {
+  console.log(list);
+  var extractedList = [];
   var extracted = false;
-  for (key in obj) {
-    const child = obj[key];
-    if (Array.isArray(child)) {
-      console.log(child);
-      child.forEach(elem => {while(extractChildren(elem));});
-    } else {
-      if (hasArray(child)) {
-        var list = extractAll(child);
-        getArrayNameList(child).forEach(childArrayKey => delete child[childArrayKey]);
-        const val = {};
-        val[key] = list;
-        Object.assign(obj, val);
-        extracted = true;
-      } else {
-        extracted = extracted || extractChildren(child);
+  for(var i = 0; i < list.length; i++) {
+    var obj = list[i];
+    if (hasArray(obj)) {
+      for (var key in obj) {
+        var tmp = obj[key];
+        if (Array.isArray(tmp)) {
+          if (tmp.length > 0) {
+            extractedList = extractedList.concat(extract(obj, key));
+            extracted = true;
+          } else {
+            delete obj[key];
+          }
+        } else if (hasArray(tmp)) {
+          const childList = [tmp];
+          while(extractAll2(childList));
+          delete obj[key];
+          const o = {};
+          o[key] = childList;
+          Object.assign(obj, o);
+          //obj[key] = childList;
+          return true;
+        }
       }
     }
   }
-  return extracted;
-}
-*/
-
-function extractAll(obj) {
-  //while (extractChildren(obj));
-  var extractedList = [obj];
-  //console.log(getArrayNameList(obj));
-  var extracted = false;
-  getArrayNameList(obj).forEach(key => {
-    var tmp = obj[key];
-    if (hasArray(obj)) {
-      extractedList = extractList(extractedList, key);
-      extracted = true;
-    }
-  });
-  return extractedList;
-}
-function extractAllList(obj) {
-  const ret = [];
-  obj.forEach(elem => Array.prototype.push.apply(ret, extractAll(elem)));
-  return ret;
-}
-
-function extractAll2(list) {
-  var extractedList = [];
-  var extracted = false;
-  list.forEach(obj => {
-    if (hasArray(obj)) {
-      getArrayNameList(obj).forEach(key => {
-        var tmp = obj[key];
-        if (Array.isArray(tmp)) {
-          extractedList = extractedList.concat(extract(obj, key));
-          extracted = true;
-        }
-      });
-    }
-  });
   if (extracted) {
     list.splice(0, list.length);
     Array.prototype.push.apply(list, extractedList);  
