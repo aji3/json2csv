@@ -182,9 +182,11 @@ function extract(obj, name) {
         retObj[name + "." + key] = elem[key];
       }
     } else {
-      ret.push(elem);
+      var tmp = {};
+      tmp[name] =  elem;
+      tmp = Object.assign({}, obj, tmp);
+      ret.push(tmp);
     }
-
   }
   return ret;
 }
@@ -225,6 +227,7 @@ function extractAll2(list) {
           if (tmp.length > 0) {
             extractedList = extractedList.concat(extract(obj, key));
             extracted = true;
+            break;
           } else {
             delete obj[key];
           }
