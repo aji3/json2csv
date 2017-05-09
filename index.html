@@ -89,6 +89,12 @@
     border: 1px solid rgb(221, 221, 221);
     margin: 0px;
   }
+  .vertical:hover {
+    cursor: n-resize;
+  }
+  .horizontal:hover {
+    cursor: e-resize;
+  } 
   </style>
 </head>
 <body>
@@ -98,7 +104,7 @@
       <x-row :h="'50% - ' + middleSeparatorOffset.y + 'px'">
         <x-json :csvdata="csvdata" :w="leftPanelWidth" ></x-json>
         <x-separator :offset="upperMiddleSeparatorOffset" direction="horizontal" :h="'50% - 18px - ' + middleSeparatorOffset.y + 'px'" w="5px" top="40px" left="70%"></x-separator>
-        <x-config :w="rightPanelWidth" ></x-config>
+        <x-config :w="rightPanelWidth" h="100%" ></x-config>
       </x-row>
       <x-row :h="'50% + ' + middleSeparatorOffset.y + 'px'">
         <x-separator :offset="middleSeparatorOffset" direction="vertical" h="5px" w="100%" top="50% + 20px" left="0px"></x-separator>
@@ -276,13 +282,21 @@ Vue.component('x-row', {
 Vue.component('x-panel', {
   props: ['title', 'w', 'h',],
   template: `
-<div :style="{height: h, position: 'relative', float: 'left', width: w, overflow: 'hidden'}" @mouseover="mouseover">
+<div :style="{position: 'relative', float: 'left', width, height, overflow: 'hidden'}" style="border: 1px solid #777; margin: 1px; border-radius: 5px; padding: 2px;" @mouseover="mouseover">
   <slot></slot>
   <div style="position: absolute; left: calc(100% - 200px); top: 15px; text-align: right; width: 190px;">
-    <label style="background-color: blue; opacity: 0.5; padding: 2px 10px; border-radius: 14px; color: white;">{{title}}</label>
+    <label style="background-color: blue; opacity: 0.5; padding: 2px 10px; border-radius: 14px; color: white; user-select: none;">{{title}}</label>
   </div>
 </div>
   `,
+  computed: {
+    width: function() {
+      return `calc(${this.w} - 8px)`;
+    },
+    height: function() {
+      return `calc(${this.h} - 8px)`
+    },
+  },
   methods: {
     mouseover: function() {
       this.$emit('mouseover');
@@ -455,9 +469,9 @@ Vue.component('x-csv', {
   }
 })
 Vue.component('x-config', {
-  props: ['w', 'mouseover'],
+  props: ['w', 'h', 'mouseover'],
   template: `
-<x-panel title="Configuration" :w="w" h="50%" :mouseover="mouseover">
+<x-panel title="Configuration" :w="w" :h="h" :mouseover="mouseover">
   Configuration will be implemented later..
 </x-panel>
   `
@@ -470,7 +484,7 @@ Vue.component('x-separator', {
     }
   },
   template: `
-  <div :style="[{backgroundColor: 'gray', height: heightValue, width: w, position: 'absolute', zIndex: 200, top: topValue, 'left': leftValue,}]" @mousedown="startDrag" ></div>
+  <div :class="{vertical: direction === 'vertical', horizontal : direction === 'horizontal'}" :style="[{ height: heightValue, width: w, position: 'absolute', zIndex: 200, top: topValue, 'left': leftValue,}]" @mousedown="startDrag" ></div>
   `,
   computed: {
     leftValue: function() {
@@ -486,10 +500,10 @@ Vue.component('x-separator', {
     },
     topValue: function() {
       if (this.direction === 'horizontal') {
-        return `calc(${this.top})`;
+        return `calc(${this.top} - 2px)`;
       } else {
         if (this.top) {
-          return `calc(${this.top} - ${this.offset.y}px)`;
+          return `calc(${this.top} - ${this.offset.y}px - 2px)`;
         } else {
           return '50%';
         }
@@ -541,7 +555,7 @@ Vue.component('x-table', {
     }
   },
   template: `
-  <x-panel :title="title" :w=w :h=h>
+  <x-panel :title="title" :w=w :h=h >
     <slot name="header"></slot>
     <div style="margin: 10px 5px; width: calc(100% - 5px); height: calc(100% - 10px); overflow: scroll; position: relative;" @scroll="onscroll">
       <div class="row" :style="{position: 'absolute', left: footerScrollLeft + 'px'}">
@@ -694,13 +708,13 @@ var app = new Vue({
   },
   computed: {
     leftPanelWidth: function() {
-      return `calc(70% - ${this.upperMiddleSeparatorOffset.x}px)`;
+      return `70% - ${this.upperMiddleSeparatorOffset.x}px`;
     },
     rightPanelWidth: function() {
-      return `calc(30% + ${this.upperMiddleSeparatorOffset.x}px)`;
+      return `30% + ${this.upperMiddleSeparatorOffset.x}px`;
     },
     topHight: function() {
-      return 'calc(50% - 20px)';
+      return '50% - 20px';
     }
   },
   methods: {
