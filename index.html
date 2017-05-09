@@ -217,6 +217,7 @@ function hasArray(obj) {
 function extractAll2(list) {
   console.log(list);
   var extractedList = [];
+  var noExtractList = [];
   var extracted = false;
   for(var i = 0; i < list.length; i++) {
     var obj = list[i];
@@ -243,10 +244,14 @@ function extractAll2(list) {
         }
       }
     }
+    if (!extracted) {
+      noExtractList.push(obj);
+    }
   }
   if (extracted) {
     list.splice(0, list.length);
-    Array.prototype.push.apply(list, extractedList);  
+    Array.prototype.push.apply(list, extractedList);
+    Array.prototype.push.apply(list, noExtractList);
   }
   return extracted;
 }
