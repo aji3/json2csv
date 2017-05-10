@@ -227,6 +227,7 @@ function extractAll2(list) {
   var extracted = false;
   for(var i = 0; i < list.length; i++) {
     var obj = list[i];
+    var thisObjExtracted = false;
     if (hasArray(obj)) {
       for (var key in obj) {
         var tmp = obj[key];
@@ -234,6 +235,7 @@ function extractAll2(list) {
           if (tmp.length > 0) {
             extractedList = extractedList.concat(extract(obj, key));
             extracted = true;
+            thisObjExtracted = true;
             break;
           } else {
             delete obj[key];
@@ -250,7 +252,7 @@ function extractAll2(list) {
         }
       }
     }
-    if (!extracted) {
+    if (!thisObjExtracted) {
       noExtractList.push(obj);
     }
   }
@@ -410,7 +412,7 @@ Vue.component('x-csv', {
   props: ['csvdata'],
   template:`
 <x-table title="CSV" w="100%" h="100%" :data="csvdata" >
-  <a slot="footer" class="btn" style="position: absolute; z-index: 300; top: calc(100% - 80px); left: calc(50% - 100px); width: 150px; opacity: 0.7;" id="download" href="#" download="test.csv" @click="download">DOWNLOAD</a>
+  <a slot="footer" class="btn" style="position: absolute; z-index: 300; top: calc(100% - 80px); left: calc(50% - 100px); width: 150px; opacity: 0.7;" id="download" href="#" download="data.csv" @click="download">DOWNLOAD</a>
 </x-table>
 <!--
 <x-panel title="CSV" w="100%" h="100%">
@@ -458,11 +460,12 @@ Vue.component('x-csv', {
       const ret = [];
       headers.forEach(header => ret.push(header + ','));
       ret.push('\r\n');
-      // list.forEach(data => ret.push(JSON.stringify(data).replace(/^{,?/, '').replace(/}$/, '') + '\r\n') );
       list.forEach(data => {
         headers.forEach(header => {
           var str = data[header];
-          if (typeof str === 'string') {
+          if (str === undefined) {
+            str = '';
+          } else if (typeof str === 'string') {
             str = '"' + str.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(/"/g, '""') + '"';
           }
           ret.push(str + ',')
