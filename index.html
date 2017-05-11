@@ -264,10 +264,15 @@ function extractAll2(list) {
   return extracted;
 }
 
-function createSchema(obj) {
+function createSchema(list) {
   const ret = [];
-  for(key in obj[0]) {
-    ret.push(key);
+  for (var i = 0; i < list.length; i++) {
+    var obj = list[i];
+    for(var key in obj) {
+      if (ret.indexOf(key) < 0) {
+        ret.push(key);
+      }
+    }
   }
   ret.sort();
   return ret;
@@ -619,13 +624,17 @@ Vue.component('x-table', {
   computed: {
     properties: function() {
       const properties = [];
-      // console.log(this.definitions);
       if (!this.definitions) {
-        if (this.data && this.data.length > 0) {
-          for(key in this.data[0]) {
-            properties.push({key});
+        const tmpProperties = [];
+        for (var i = 0; i < this.data.length; i++) {
+          var obj = this.data[i];
+          for (var key in obj) {
+            if (tmpProperties.indexOf(key) < 0) {
+              tmpProperties.push(key);
+            }
           }
         }
+        tmpProperties.forEach(prop => properties.push({key: prop}));
         return properties;
       }
       this.definitions.forEach(def => {
