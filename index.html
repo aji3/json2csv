@@ -223,6 +223,7 @@ function extractAll(list, asChildList) {
             Array.prototype.push.apply(extractedList, extract(obj, key));
             // console.log(extractedList);
             extracted = true;
+            thisObjExtracted = true;
             break;
           } else {
             delete obj[key];
@@ -244,7 +245,7 @@ function extractAll(list, asChildList) {
     } else {
       // list of value cannot be extracted
     }
-    if (!extracted) {
+    if (!thisObjExtracted) {
       noExtractList.push(obj);
     }
   }
@@ -256,10 +257,15 @@ function extractAll(list, asChildList) {
   return extracted;
 }
 
-function createSchema(obj) {
+function createSchema(list) {
   const ret = [];
-  for(key in obj[0]) {
-    ret.push(key);
+  for (var i = 0; i < list.length; i++) {
+    var obj = list[i];
+    for(var key in obj) {
+      if (ret.indexOf(key) < 0) {
+        ret.push(key);
+      }
+    }
   }
   ret.sort();
   return ret;
@@ -401,7 +407,7 @@ Vue.component('x-csv', {
   props: ['csvdata'],
   template:`
 <x-table title="CSV" w="100%" h="100%" :data="csvdata" >
-  <a slot="footer" class="btn" style="position: absolute; z-index: 300; top: calc(100% - 80px); left: calc(50% - 100px); width: 150px; opacity: 0.7;" id="download" href="#" download="test.csv" @click="download">DOWNLOAD</a>
+  <a slot="footer" class="btn" style="position: absolute; z-index: 300; top: calc(100% - 80px); left: calc(50% - 100px); width: 150px; opacity: 0.7;" id="download" href="#" download="data.csv" @click="download">DOWNLOAD</a>
 </x-table>
 <!--
 <x-panel title="CSV" w="100%" h="100%">
@@ -449,11 +455,12 @@ Vue.component('x-csv', {
       const ret = [];
       headers.forEach(header => ret.push(header + ','));
       ret.push('\r\n');
-      // list.forEach(data => ret.push(JSON.stringify(data).replace(/^{,?/, '').replace(/}$/, '') + '\r\n') );
       list.forEach(data => {
         headers.forEach(header => {
           var str = data[header];
-          if (typeof str === 'string') {
+          if (str === undefined) {
+            str = '';
+          } else if (typeof str === 'string') {
             str = '"' + str.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/\t/g, '\\t').replace(/"/g, '""') + '"';
           }
           ret.push(str + ',')
@@ -607,13 +614,17 @@ Vue.component('x-table', {
   computed: {
     properties: function() {
       const properties = [];
-      // console.log(this.definitions);
       if (!this.definitions) {
-        if (this.data && this.data.length > 0) {
-          for(key in this.data[0]) {
-            properties.push({key});
+        const tmpProperties = [];
+        for (var i = 0; i < this.data.length; i++) {
+          var obj = this.data[i];
+          for (var key in obj) {
+            if (tmpProperties.indexOf(key) < 0) {
+              tmpProperties.push(key);
+            }
           }
         }
+        tmpProperties.forEach(prop => properties.push({key: prop}));
         return properties;
       }
       this.definitions.forEach(def => {
