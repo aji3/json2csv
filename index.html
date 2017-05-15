@@ -4,8 +4,6 @@
   <meta charset="utf-8">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css">
   <script src="https://unpkg.com/vue@2.3.2"></script>
-
-
   <style>
   body{
     font-family: "Helvetica Neue", -apple-system,BlinkMacSystemFont,Segoe UI,Hiragino Kaku Gothic ProN,"メイリオ",meiryo,sans-serif;
@@ -94,7 +92,7 @@
   }
   .horizontal:hover {
     cursor: e-resize;
-  } 
+  }
   </style>
 </head>
 <body>
@@ -170,32 +168,29 @@ function flatten(obj, context) {
   }
 }
 function extract(obj, name) {
-  if (!obj) {
-    return null;
-  }
-  var list = obj[name];
-  if (!list) {
-    return obj;
-  }
   const ret = [];
+  const list = obj[name];
   for (var i = 0; i < list.length; i++) {
-    var elem = list[i];
+    const elem = list[i];
+    const retObj = Object.assign({}, obj);
+    delete retObj[name];
+    ret.push(retObj);
+    var thisName = name + "";
     if (typeof elem === 'object') {
-      const retObj = Object.assign({}, obj);
-      delete retObj[name];
-      ret.push(retObj);
-      for (key in elem) {
-        retObj[name + "." + key] = elem[key];
+      if (Array.isArray(elem) && true) {
+        retObj[thisName + ".[]"] = elem;
+      } else {
+        for (key in elem) {
+          retObj[thisName + "." + key] = elem[key];
+        }
       }
     } else {
-      var tmp = {};
-      tmp[name] =  elem;
-      tmp = Object.assign({}, obj, tmp);
-      ret.push(tmp);
+      retObj[thisName] =  elem;
     }
   }
   return ret;
 }
+
 function getArrayNameList(obj) {
   const ret = [];
   for (key in obj) {
@@ -205,50 +200,49 @@ function getArrayNameList(obj) {
   }
   return ret;
 }
-function hasArray(obj) {
-  if (!obj || typeof obj !== 'object') {
-    return false;
-  }
-  for (key in obj) {
-    if (Array.isArray(obj[key])) {
-      return true;
-    }
-    if (hasArray(obj[key])) {
-      return true;
-    }
-  }
-  return false;
-}
 
-function extractAll2(list) {
-  console.log(list);
+function extractAll(list, asChildList) {
   var extractedList = [];
   var noExtractList = [];
   var extracted = false;
-  for(var i = 0; i < list.length; i++) {
+  for (var i = 0; i < list.length; i++) {
     var obj = list[i];
-    if (hasArray(obj)) {
+    if (Array.isArray(obj)) {
+      // if "obj" is list, then flatten it.
+      // [[1, 2], [3], [4, 5], ...] -> [1, 2, 3, 4, 5, ]
+      Array.prototype.push.apply(extractedList, obj);
+      extracted = true;
+    } else if (typeof obj === 'object') {
+      // if "obj" is object, then loop for all the elements in the object
       for (var key in obj) {
-        var tmp = obj[key];
-        if (Array.isArray(tmp)) {
-          if (tmp.length > 0) {
-            extractedList = extractedList.concat(extract(obj, key));
+        var elem  = obj[key];
+        if (Array.isArray(elem)) {
+          // if elem is list, then extract the list
+          if (elem.length > 0) {
+            // console.log(asChildList);
+            Array.prototype.push.apply(extractedList, extract(obj, key));
+            // console.log(extractedList);
             extracted = true;
             break;
           } else {
             delete obj[key];
           }
-        } else if (hasArray(tmp)) {
-          const childList = [tmp];
-          while(extractAll2(childList));
-          delete obj[key];
-          const o = {};
-          o[key] = childList;
-          Object.assign(obj, o);
-          //obj[key] = childList;
-          return true;
+        } else if (typeof elem === 'object') {
+          const childList = [elem];
+          var extractedCount = 0;
+          while(extractAll(childList, true)) {extractedCount++;};
+          if (extractedCount > 0) {
+            obj[key] = childList;
+            return true;
+          } else {
+            return false;
+          }
+        } else {
+          // list of value cannot be extracted
         }
       }
+    } else {
+      // list of value cannot be extracted
     }
     if (!extracted) {
       noExtractList.push(obj);
@@ -328,16 +322,13 @@ Vue.component('x-json', {
       if (this.csvdata) {
         this.csvdata.splice(0, this.csvdata.length);
         if (Array.isArray(this.jsonObject)) {
-          //Array.prototype.push.apply(this.csvdata, flatten(extractAllList(this.jsonObject)));
-          while(extractAll2(this.jsonObject));
+          while(extractAll(this.jsonObject));
           Array.prototype.push.apply(this.csvdata, flatten(this.jsonObject));
         } else {
-          //Array.prototype.push.apply(this.csvdata, flatten(extractAll(this.jsonObject)));
           var list = [this.jsonObject];
-          while(extractAll2(list));
+          while(extractAll(list));
           Array.prototype.push.apply(this.csvdata, flatten(list));
         }
-        // console.log(this.csvdata);
       }
     }
   },
@@ -381,7 +372,7 @@ Vue.component('x-json', {
           ret += '\r\n' + indent + c;
         } else if (c == ',') {
           ret += c + '\r\n' + indent;
-        } else if (c == '\r' || c == '\n') {
+        } else if (c == '\r' || c == '\n' || c == ' ') {
 
         } else {
           ret += c;
