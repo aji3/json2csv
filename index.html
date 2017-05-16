@@ -1,4 +1,3 @@
-
 <html>
 <head>
   <meta charset="utf-8">
@@ -86,6 +85,9 @@
     padding: 8px 12px;
     border: 1px solid rgb(221, 221, 221);
     margin: 0px;
+  }
+  .paginate_button.active {
+    background-color: rgb(221, 221, 221);
   }
   .vertical:hover {
     cursor: n-resize;
@@ -207,6 +209,7 @@ function extractAll(list, asChildList) {
   var extracted = false;
   for (var i = 0; i < list.length; i++) {
     var obj = list[i];
+    var thisObjExtracted = false;
     if (Array.isArray(obj)) {
       // if "obj" is list, then flatten it.
       // [[1, 2], [3], [4, 5], ...] -> [1, 2, 3, 4, 5, ]
@@ -236,14 +239,14 @@ function extractAll(list, asChildList) {
             obj[key] = childList;
             return true;
           } else {
-            return false;
+            continue;
           }
         } else {
-          // list of value cannot be extracted
+          // list of value not need to be extracted
         }
       }
     } else {
-      // list of value cannot be extracted
+      // list of value not need to be extracted
     }
     if (!thisObjExtracted) {
       noExtractList.push(obj);
@@ -255,6 +258,20 @@ function extractAll(list, asChildList) {
     Array.prototype.push.apply(list, noExtractList);
   }
   return extracted;
+}
+
+const Schema = function() {
+  this.properties = [];
+}
+
+function createSchema2(obj) {
+  if (Arrays.isArray(obj)) {
+
+  } else if (typeof obj === 'object') {
+
+  } else {
+
+  }
 }
 
 function createSchema(list) {
@@ -270,6 +287,7 @@ function createSchema(list) {
   ret.sort();
   return ret;
 }
+
 Vue.component('x-row', {
   props: ['h'],
   template: `
@@ -601,7 +619,7 @@ Vue.component('x-table', {
           <div style="text-align: right;">
             <ul class="paginate">
               <li :class="['paginate_button', {disabled: currentPage === 0}]"><a @click="previousPage">Previous</a></li>
-              <li v-for="number in pageList" class="paginate_button active"><a>{{number}}</a></li>
+              <li v-for="number in pageList" :class="['paginate_button', {active: currentPage + 1 == number}]"><a>{{number}}</a></li>
               <li :class="['paginate_button', {disabled: !hasNext}]"><a @click="nextPage">Next</a></li>
             </ul>
           </div>
@@ -611,6 +629,11 @@ Vue.component('x-table', {
     <slot name="footer"></slot>
   </x-panel>
   `,
+  watch: {
+    data: function() {
+      this.currentPage = 0;
+    },
+  },
   computed: {
     properties: function() {
       const properties = [];
@@ -672,7 +695,7 @@ Vue.component('x-table', {
         list = this.filterByString(list, this.filterValue);
       }
       return this.paginate(list);
-    }
+    },
   },
   methods: {
     onscroll: function(e) {
@@ -701,7 +724,7 @@ Vue.component('x-table', {
         dataTo = list.length;
       }
       return list.slice(dataFrom, dataTo);
-    }
+    },
   }
 })
 
