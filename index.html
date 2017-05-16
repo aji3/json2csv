@@ -619,7 +619,7 @@ Vue.component('x-table', {
           <div style="text-align: right;">
             <ul class="paginate">
               <li :class="['paginate_button', {disabled: currentPage === 0}]"><a @click="previousPage">Previous</a></li>
-              <li v-for="number in pageList" :class="['paginate_button', {active: currentPage + 1 == number}]"><a>{{number}}</a></li>
+              <li v-for="number in pageList" :class="['paginate_button', {active: currentPage + 1 == number}]" @click="currentPage = number - 1"><a>{{number}}</a></li>
               <li :class="['paginate_button', {disabled: !hasNext}]"><a @click="nextPage">Next</a></li>
             </ul>
           </div>
