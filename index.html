@@ -235,6 +235,7 @@ function extractAll(list, context) {
       // [[1, 2], [3], [4, 5], ...] -> [1, 2, 3, 4, 5, ]
       Array.prototype.push.apply(extractedList, obj);
       extracted = true;
+      thisObjExtracted = true;
     } else if (typeof obj === 'object') {
       // if "obj" is object, then loop for all the elements in the object
       for (var key in obj) {
