@@ -203,7 +203,27 @@ function getArrayNameList(obj) {
   return ret;
 }
 
-function extractAll(list, asChildList) {
+function hasArray(obj) {
+  for(var key in obj) {
+    var elem = obj[key];
+    if (Array.isArray(elem)) {
+      return true;
+    } else if (typeof elem === 'object') {
+      var ret = hasArray(elem);
+      if (ret) {
+        return true;
+      }
+    } else {
+      // no operation
+    }
+  }
+  return false;
+}
+
+function extractAll(list, context) {
+  if (!context) {
+    context = new FlattenContext();
+  }
   var extractedList = [];
   var noExtractList = [];
   var extracted = false;
@@ -222,9 +242,7 @@ function extractAll(list, asChildList) {
         if (Array.isArray(elem)) {
           // if elem is list, then extract the list
           if (elem.length > 0) {
-            // console.log(asChildList);
             Array.prototype.push.apply(extractedList, extract(obj, key));
-            // console.log(extractedList);
             extracted = true;
             thisObjExtracted = true;
             break;
@@ -232,15 +250,19 @@ function extractAll(list, asChildList) {
             delete obj[key];
           }
         } else if (typeof elem === 'object') {
-          const childList = [elem];
-          var extractedCount = 0;
-          while(extractAll(childList, true)) {extractedCount++;};
-          if (extractedCount > 0) {
-            obj[key] = childList;
-            return true;
-          } else {
-            continue;
+          if (hasArray(elem)) {
+            // if the "elem" contains list, then extract
+            var extractedCount = 0;
+            const childList = [elem];
+            context.push(key);
+            while(extractAll(childList, context)) {extractedCount++;};
+            context.pop();
+            if (extractedCount > 0) {
+              obj[key] = childList;
+              return true;
+            }
           }
+          continue;
         } else {
           // list of value not need to be extracted
         }
@@ -427,33 +449,6 @@ Vue.component('x-csv', {
 <x-table title="CSV" w="100%" h="100%" :data="csvdata" >
   <a slot="footer" class="btn" style="position: absolute; z-index: 300; top: calc(100% - 80px); left: calc(50% - 100px); width: 150px; opacity: 0.7;" id="download" href="#" download="data.csv" @click="download">DOWNLOAD</a>
 </x-table>
-<!--
-<x-panel title="CSV" w="100%" h="100%">
-  <div style="overflow: scroll; width: calc(100% - 1em); height: calc(100% - 1em); padding: .5em;">
-    <table class="csvtable">
-      <thead>
-        <tr>
-          <td v-for="head in schema">
-            <div>
-            {{head}}
-            </div>
-          </td>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="data in filteredData">
-          <td v-for="head in schema">
-            <div>
-              <span>{{data[head]}}</span>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-  </div>
-</x-panel>
--->
   `,
   computed: {
     schema: function() {
@@ -618,9 +613,9 @@ Vue.component('x-table', {
         <div style="display: inline-block; width: 48%;">
           <div style="text-align: right;">
             <ul class="paginate">
-              <li :class="['paginate_button', {disabled: currentPage === 0}]"><a @click="previousPage">Previous</a></li>
-              <li v-for="number in pageList" :class="['paginate_button', {active: currentPage + 1 == number}]" @click="currentPage = number - 1"><a>{{number}}</a></li>
-              <li :class="['paginate_button', {disabled: !hasNext}]"><a @click="nextPage">Next</a></li>
+              <li :class="['paginate_button', {disabled: currentPage === 0}]" @click="previousPage"><a><label style="user-select: none;">Previous</label></a></li>
+              <li v-for="number in pageList" :class="['paginate_button', {active: currentPage + 1 == number}]" @click="currentPage = number - 1"><a><label style="user-select: none;">{{number}}</label></a></li>
+              <li :class="['paginate_button', {disabled: !hasNext}]" @click="nextPage"><a><label style="user-select: none;">Next</label></a></li>
             </ul>
           </div>
         </div>

@@ -30,8 +30,38 @@ OK??
     [{"aa": "valueaa",
       "bb": "valuebb"}],
     [{"aa": "valueaa",
-      "bb": "valuebb"}]
-  ]
+      "bb": "valuebb",
+      "cc": {
+        "dd": ["ee", "ff"]
+      }}]
+  ],
+  "test5":[
+    [{"aa": "valueaa",
+      "bb": "valuebb"}],
+    [{"aa": "valueaa",
+      "bb": "valuebb"}],
+    [{"aa": "valueaa",
+      "bb": "valuebb",
+      "cc": {
+        "dd": ["ee", "ff"]
+      }}]
+  ],
+  "test6":{
+    "bb": {
+      "cc": {
+        "dd": "ee",
+        "ff": true
+      }
+    }
+  },
+  "test7":{
+    "bb": {
+      "cc": {
+        "dd": "ee",
+        "ff": true
+      }
+    }
+  }
 }
 
 test[]
@@ -40,6 +70,26 @@ test[].bb
 test2[]
 test2[].aa
 test2[].bb
+
+
+-------------------------------
+
+{
+  "test":[
+    [{"aa": "valueaa",
+      "bb": "valuebb"}]
+  ],
+  "test6":{
+    "aa": [1, 2, 3, 4],
+    "bb": {
+      "cc": {
+        "dd": "ee",
+        "ff": true
+      }
+    }
+  }
+}
+
 
 -------------------------------
 List of values
