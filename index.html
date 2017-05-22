@@ -282,18 +282,138 @@ function extractAll(list, context) {
   }
   return extracted;
 }
-
-const Schema = function() {
-  this.properties = [];
+const Type = {
+  object: 'object',
+  list: 'list',
+  value: 'value',
+}
+const Schema = function(type, name) {
+  this.type = type;
+  this.name = name;
+  this.parent = null;
+  this.children = {};
+  this.listSize = 0;
+}
+Schema.prototype.getParent = function() {
+  return this.parent;
+}
+Schema.prototype.setParent = function(parent) {
+  this.parent = parent;
+}
+Schema.prototype.getChild = function(name) {
+  return this.children[name];
+}
+Schema.prototype.addChild = function(schema) {
+  if (!this.children[schema.getName()]) {
+    this.children[schema.getName()] = schema;
+  }
+  return this.children[schema.getName()];
+}
+Schema.prototype.getName = function() {
+  return this.name;
+}
+Schema.prototype.addListSize = function(listSize) {
+  this.listSize += listSize;
 }
 
-function createSchema2(obj) {
-  if (Arrays.isArray(obj)) {
+const SchemaContext = function() {
+  this.names = ['#root'];
+  this.rootSchema = null;
+  this.parentSchema = null;
+  this.currentSchema = null;
+}
+// SchemaContext.prototype.registered = function() {
+//   return this.currentSchema;
+// }
+SchemaContext.prototype.currentName = function() {
+  return this.names[this.names.length - 1];
+}
+SchemaContext.prototype.registerSchema = function(type, name, listSize) {
+  // console.log(type+ "," + name);
+  var schema = new Schema(type, name);
+  if (!this.rootSchema) {
+    this.rootSchema = schema;
+  }
+  if (this.parentSchema) {
+    schema.setParent(this.parentSchema);
+    schema = this.parentSchema.addChild(schema);
+  }
+  this.currentSchema = schema;
+  if (listSize) {
+    schema.addListSize(listSize);
+  }
+}
+SchemaContext.prototype.push = function(name) {
+  // console.log(this.names.join() + "," + name);
+  this.names.push(name);
+  this.parentSchema = this.currentSchema;
+  this.currentSchema = this.currentSchema.getChild(name);
+}
+SchemaContext.prototype.pop = function() {
+  this.names.splice(this.names.length - 1, 1);
+  this.currentSchema = this.currentSchema.getParent();
+  this.getParent = this.currentSchema.getParent();
+}
 
+function countListSize(list) {
+  var count = 0;
+  for (var i = 0; i < list.length; i++) {
+    var obj = list[i];
+    if (Array.isArray(obj)) {
+      count += countListSize(obj);
+    } else if (typeof obj === 'object') {
+      count += countObjectSize(obj);
+    } else {
+      count++;
+    }
+  }
+  return count;
+}
+function countObjectSize(object) {
+  var count = 1;
+  for (var key in object) {
+    var obj = object[key];
+    var tmp = 0;
+    if (Array.isArray(obj)) {
+      tmp = countListSize(obj);
+    } else if (typeof obj === 'object') {
+      tmp = countObjectSize(obj);
+    } else {
+    }
+    if (tmp != 0) {
+      count *= tmp;
+    }
+  }
+  return count;
+}
+
+function createSchema2(obj, context, parentIsList) {
+  if (!parentIsList) {
+    parentIsList = false;
+  }
+  if (Array.isArray(obj)) {
+    context.registerSchema(Type.list, context.currentName(), obj.length);
+    obj.forEach(elem => {
+      if (Array.isArray(elem)) {
+        context.push('[]');
+      }
+      createSchema2(elem, context, true);
+      if (Array.isArray(elem)) {
+        context.pop();
+      }
+    });
   } else if (typeof obj === 'object') {
-
+    if (!parentIsList) {
+      context.registerSchema(Type.object, context.currentName());
+    }
+    for (var key in obj) {
+      var elem = obj[key];
+      context.push(key);
+      createSchema2(elem, context, false);
+      context.pop();
+    }
   } else {
-
+    context.registerSchema(Type.value, context.currentName());
   }
 }
 
@@ -367,6 +487,18 @@ Vue.component('x-json', {
   watch: {
     json: function() {
       if (this.csvdata) {
+        var context = new SchemaContext();
+        // var j = JSON.parse(this.json);
+        createSchema2(this.jsonObject, context);
+        console.log(context);
+        var count = 0;
+        if (Array.isArray(this.jsonObject)) {
+          count = countListSize(this.jsonObject);
+        } else {
+          count = countObjectSize(this.jsonObject);
+        }
+        console.log(count);
+
         this.csvdata.splice(0, this.csvdata.length);
         if (Array.isArray(this.jsonObject)) {
           while(extractAll(this.jsonObject));
@@ -385,6 +517,7 @@ Vue.component('x-json', {
     },
     jsonObject: function() {
       try {
+
         return JSON.parse(this.json);
       } catch (exception) {
         // no operation
