@@ -1,9 +1,60 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css">
-  <script src="https://unpkg.com/vue@2.3.2"></script>
+
+  <script src="./js/vue.js"></script>
+  <script src="./js/superflatten.js"></script>
   <style>
+
+/* http://meyerweb.com/eric/tools/css/reset/
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+body {
+	line-height: 1;
+}
+ol, ul {
+	list-style: none;
+}
+blockquote, q {
+	quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none;
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
   body{
     font-family: "Helvetica Neue", -apple-system,BlinkMacSystemFont,Segoe UI,Hiragino Kaku Gothic ProN,"メイリオ",meiryo,sans-serif;
     /*font-family: "Helvetica Neue", Helvetica, Arial, "游ゴシック体", "Yu Gothic", YuGothic, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif*/
@@ -95,6 +146,23 @@
   .horizontal:hover {
     cursor: e-resize;
   }
+
+  .status_button {
+    width: 66px;
+    margin: 0;
+    padding: 1px 0;
+    text-align: center;
+    user-select: none;
+    border: 0;
+    font-size: 10px;
+    background-color: slategray;
+    color: white;
+    border-radius: 3px;
+  }
+  .status_button.active {
+    background-color: #01478D;
+    color: white;
+  }
   </style>
 </head>
 <body>
@@ -104,7 +172,7 @@
       <x-row :h="'50% - ' + middleSeparatorOffset.y + 'px'">
         <x-json :csvdata="csvdata" :w="leftPanelWidth" ></x-json>
         <x-separator :offset="upperMiddleSeparatorOffset" direction="horizontal" :h="'50% - 18px - ' + middleSeparatorOffset.y + 'px'" w="5px" top="40px" left="70%"></x-separator>
-        <x-config :w="rightPanelWidth" h="100%" ></x-config>
+        <x-config :schema="schema.root" :count="schema.count" :w="rightPanelWidth" h="100%" ></x-config>
       </x-row>
       <x-row :h="'50% + ' + middleSeparatorOffset.y + 'px'">
         <x-separator :offset="middleSeparatorOffset" direction="vertical" h="5px" w="100%" top="50% + 20px" left="0px"></x-separator>
@@ -116,15 +184,29 @@
 
 <script>
 
-function FlattenContext(names) {
-  if (names) {
-    this.names = [].concat(names);
-  } else {
-    this.names = [];
-  }
+function FlattenContext() {
+  this.names = [];
+  this.schema = null;
+  this.flattenedSchema = {};
 }
 FlattenContext.prototype.getNames = function() {
   return this.names;
+}
+FlattenContext.prototype.setSchema = function(schema) {
+  this.schema = schema;
+  this.flattenedSchema = this.flattenSchema(schema, new FlattenContext());
+  // console.log(this.flattenedSchema);
+}
+FlattenContext.prototype.flattenSchema = function(schema, context) {
+  var ret = {};
+  ret[context.currentName()] = schema;
+  for (var key in schema.children) {
+    var child = schema.children[key];
+    context.push(key);
+    Object.assign(ret, this.flattenSchema(child, context));
+    context.pop();
+  }
+  return ret;
 }
 FlattenContext.prototype.push = function(name) {
   this.names.push(name);
@@ -142,6 +224,18 @@ FlattenContext.prototype.currentName = function() {
     ret += name;
   }
   return ret;
+}
+FlattenContext.prototype.getExtractStatus = function(key) {
+  if (!key) {
+    key = '';
+  }
+  var name = this.currentName();
+  if (name.length === 0) {
+    name = key;
+  } else {
+    name += (key.length > 0 ? '.' : '') + key;
+  }
+  return this.flattenedSchema[name].status;
 }
 
 function flatten(obj, context) {
@@ -169,6 +263,7 @@ function flatten(obj, context) {
     return ret;
   }
 }
+
 function extract(obj, name) {
   const ret = [];
   const list = obj[name];
@@ -179,7 +274,7 @@ function extract(obj, name) {
     ret.push(retObj);
     var thisName = name + "";
     if (typeof elem === 'object') {
-      if (Array.isArray(elem) && true) {
+      if (Array.isArray(elem)) {
         retObj[thisName + ".[]"] = elem;
       } else {
         for (key in elem) {
@@ -224,6 +319,11 @@ function extractAll(list, context) {
   if (!context) {
     context = new FlattenContext();
   }
+  const extractStatus = context.getExtractStatus();
+  if (extractStatus === 'OFF') {
+    return [];
+  }
+  // console.log(context.currentName() + ":" + extractStatus);
   var extractedList = [];
   var noExtractList = [];
   var extracted = false;
@@ -233,15 +333,40 @@ function extractAll(list, context) {
     if (Array.isArray(obj)) {
       // if "obj" is list, then flatten it.
       // [[1, 2], [3], [4, 5], ...] -> [1, 2, 3, 4, 5, ]
-      Array.prototype.push.apply(extractedList, obj);
-      extracted = true;
-      thisObjExtracted = true;
+      if (extractStatus === 'FLATTEN') {
+        // console.log("test");
+        var tmp = {};
+        for (var j = 0; j < obj.length; j++) {
+          tmp[j] = obj[j];
+        }
+        const childList = [tmp];
+        while(extractAll(childList, context)) {};
+        Array.prototype.push.apply(extractedList, childList);
+      } else {
+        Array.prototype.push.apply(extractedList, obj);
+        extracted = true;
+        thisObjExtracted = true;
+      }
     } else if (typeof obj === 'object') {
       // if "obj" is object, then loop for all the elements in the object
       for (var key in obj) {
+        // console.log(key);
+        const childExtractStatus = context.getExtractStatus(key);
+        if (childExtractStatus === 'OFF') {
+          delete obj[key];
+        }
         var elem  = obj[key];
+        // if (childExtractStatus === 'FLATTEN') {
+        //   elem = {};
+        //   for (var i = 0; i < obj[key].length; i++) {
+        //     var tmp = obj[key][i];
+        //     elem[i] = tmp;
+        //   }
+        //   obj[key] = elem;
+        // }
         if (Array.isArray(elem)) {
           // if elem is list, then extract the list
+          // console.log(childExtractStatus);
           if (elem.length > 0) {
             Array.prototype.push.apply(extractedList, extract(obj, key));
             extracted = true;
@@ -293,6 +418,20 @@ const Schema = function(type, name) {
   this.parent = null;
   this.children = {};
   this.listSize = 0;
+
+  switch (type) {
+    case 'object':
+      this.status = 'ON';
+      break;
+    case 'list':
+      this.status = 'EXTRACT';
+      break;
+    case 'value':
+      this.status = 'ON';
+      break;
+    default:
+      break;
+  }
 }
 Schema.prototype.getParent = function() {
   return this.parent;
@@ -355,39 +494,67 @@ SchemaContext.prototype.pop = function() {
   this.getParent = this.currentSchema.getParent();
 }
 
-function countListSize(list) {
+function countListSize(list, schema) {
+  if (schema.status === 'OFF') {
+    return 0;
+  } else if (schema.status === 'FLATTEN') {
+    if (list.length > 0) {
+      return 1;
+    } else {
+      return 0;
+    }
+  }
   var count = 0;
   for (var i = 0; i < list.length; i++) {
     var obj = list[i];
     if (Array.isArray(obj)) {
-      count += countListSize(obj);
+      var childSchema = schema.children['[]'];
+      count += countListSize(obj, childSchema);
     } else if (typeof obj === 'object') {
-      count += countObjectSize(obj);
+      count += countObjectSize(obj, schema);
     } else {
-      count++;
+      if (schema.status === 'EXTRACT') {
+        count++;
+      }
     }
   }
   return count;
 }
-function countObjectSize(object) {
+function countObjectSize(object, schema) {
+  if (schema.status === 'OFF') {
+    return 1;
+  }
   var count = 1;
   for (var key in object) {
     var obj = object[key];
+    var childSchema = schema.children[key];
     var tmp = 0;
     if (Array.isArray(obj)) {
-      tmp = countListSize(obj);
+      tmp = countListSize(obj, childSchema);
     } else if (typeof obj === 'object') {
-      tmp = countObjectSize(obj);
+      tmp = countObjectSize(obj, childSchema);
     } else {
     }
     if (tmp != 0) {
-      count *= tmp;
+      if (schema.status === 'ON') {
+        count *= tmp;
+      } else if (schema.status === 'AS_LIST'){
+        count += tmp;
+      } else if (schema.status === 'OFF'){
+        // OFF - no operation
+      } else {
+        // console.log(schema.status);
+        count *= tmp;
+      }
     }
   }
   return count;
 }
 
 function createSchema2(obj, context, parentIsList) {
+  if (!context) {
+    context = new SchemaContext();
+  }
   if (!parentIsList) {
     parentIsList = false;
   }
@@ -415,6 +582,7 @@ function createSchema2(obj, context, parentIsList) {
   } else {
     context.registerSchema(Type.value, context.currentName());
   }
+  return context.rootSchema;
 }
 
 function createSchema(list) {
@@ -427,7 +595,8 @@ function createSchema(list) {
       }
     }
   }
-  ret.sort();
+  ret.sort((a, b) => a > b ? -1 : 1);
+  console.log(ret);
   return ret;
 }
 
@@ -470,6 +639,7 @@ Vue.component('x-panel', {
   },
 })
 
+var schema = {root: null};
 Vue.component('x-json', {
   props: ['csvdata', 'w',],
   data: function() {
@@ -487,27 +657,51 @@ Vue.component('x-json', {
   watch: {
     json: function() {
       if (this.csvdata) {
-        var context = new SchemaContext();
-        // var j = JSON.parse(this.json);
-        createSchema2(this.jsonObject, context);
-        console.log(context);
+        if (!schema.root) {
+          schema.root = createSchema2(this.jsonObject, context);
+        }
+        console.log(schema.root);
         var count = 0;
         if (Array.isArray(this.jsonObject)) {
-          count = countListSize(this.jsonObject);
+          count = countListSize(this.jsonObject, schema.root);
         } else {
-          count = countObjectSize(this.jsonObject);
+          count = countObjectSize(this.jsonObject, schema.root);
         }
         console.log(count);
+        schema.count = count;
 
         this.csvdata.splice(0, this.csvdata.length);
+
+        var list = null;
         if (Array.isArray(this.jsonObject)) {
-          while(extractAll(this.jsonObject));
-          Array.prototype.push.apply(this.csvdata, flatten(this.jsonObject));
+          list = this.jsonObject;
         } else {
-          var list = [this.jsonObject];
-          while(extractAll(list));
-          Array.prototype.push.apply(this.csvdata, flatten(list));
+          list = [this.jsonObject];
         }
+        var context = new FlattenContext();
+        context.setSchema(schema.root);
+        // while(extractAll(list, context));
+        // Array.prototype.push.apply(this.csvdata, flatten(list));
+        // const context2 = new SuperFlattenContext();
+        // superflattenList(list, context2);
+        // console.log(context2);
+        // Array.prototype.push.apply(this.csvdata, context2.root);
+
+        const testSchema = SuperFlatten.createSchema(list);
+        console.log(testSchema);
+
+        const value = SuperFlatten.superflatten(list);
+        console.log(value);
+        Array.prototype.push.apply(this.csvdata, value);
+        //
+        // if (Array.isArray(this.jsonObject)) {
+        //   while(extractAll(this.jsonObject, context));
+        //   Array.prototype.push.apply(this.csvdata, flatten(this.jsonObject));
+        // } else {
+        //   var list = [this.jsonObject];
+        //   while(extractAll(list, context));
+        //   Array.prototype.push.apply(this.csvdata, flatten(list));
+        // }
       }
     }
   },
@@ -558,13 +752,12 @@ Vue.component('x-json', {
           ret += c;
         }
       }
-      // console.log(ret);
       return ret.replace(/^[\s\n\r]*/, '');
     },
   },
   methods: {
     ctrlA: function() {
-      console.log('test');
+      // console.log('test');
     },
     focusJsonTextarea: function() {
       this.isTextareaFocused = true;
@@ -573,7 +766,7 @@ Vue.component('x-json', {
       })
     },
     mouseover: function() {
-      console.log("JSON");
+      // console.log("JSON");
     }
   }
 })
@@ -619,12 +812,90 @@ Vue.component('x-csv', {
   }
 })
 Vue.component('x-config', {
-  props: ['w', 'h', 'mouseover'],
+  props: ['schema', 'count', 'w', 'h', 'mouseover'],
   template: `
 <x-panel title="Configuration" :w="w" :h="h" :mouseover="mouseover">
-  Configuration will be implemented later..
+  <div style="height: 40px;">
+    count: {{count}}
+  </div>
+  <div style="width: 100%; height: 100%; overflow: scroll; ">
+    <x-config-treeview :schema="schema" isroot="true"></x-config-treeview>
+  </div>
 </x-panel>
   `
+})
+
+Vue.component('x-config-treeview', {
+  props: ['schema', 'isroot'],
+  template: `
+  <div :style="{border: 'none', 'margin-left': indent(schema)}">
+    <div style="background-color: white; margin: 2px 0 0px 0; box-shadow: 5px 5px 5px rgba(0,0,0,0.4); background-color: azure;">
+      <div style="display: inline-block; width: calc(100% - 205px); overflow: hidden; min-width: 100px; height: 20px;" v-if="name">
+        <span style="">{{name}}</span>: <span style="font-weight: bold;">{{type}}</span>
+      </div>
+      <div style="display: inline-block; width: 200px;" v-if="!isroot">
+        <div v-if="type == 'object'" style="padding-bottom: 2px;">
+          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="schema.status = 'ON'">ON</button><!--
+          --><button class="status_button" :class="{active: schema.status == 'AS_LIST'}" @click="schema.status = 'AS_LIST'">AS LIST</button><!--
+          --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="schema.status = 'OFF'">OFF</button>
+        </div>
+        <div v-if="type == 'list'" style="padding-bottom: 2px;">
+          <button class="status_button" :class="{active: schema.status == 'EXTRACT'}" @click="schema.status = 'EXTRACT'">EXTRACT</button><!--
+          --><button class="status_button" :class="{active: schema.status == 'FLATTEN'}" @click="schema.status = 'FLATTEN'">FLATTEN</button><!--
+          --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="schema.status = 'OFF'">OFF</button>
+        </div>
+        <div v-if="type == 'value'" style="padding-bottom: 2px;">
+          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="schema.status = 'ON'">ON</button><!--
+          --><div style="display: inline-block; width: 66px;"></div><!--
+          --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="schema.status = 'OFF'">OFF</button>
+        </div>
+      </div>
+    </div>
+    <x-config-treeview v-for="child in children" :schema="child" :key="child"></x-config-treeview>
+  </div>
+  `,
+  computed: {
+    name: function() {
+      return this.schema ? this.schema.name : "";
+    },
+    type: function() {
+      return this.schema ? this.schema.type : "";
+    },
+    children: function() {
+      return this.schema ? this.schema.children : [];
+    },
+  },
+  methods: {
+    indent: function(elem) {
+      if (elem == null) return 0;
+      var depth = 0;
+      while(elem.parent != null) {
+        var elem = elem.parent;
+        depth++;
+      }
+      return (depth * 4) + "px";
+    },
+  },
+  mounted: function() {
+    // if (this.schema) {
+    //   var defaultValue = '';
+    //   switch (this.schema.type) {
+    //     case 'object':
+    //       defaultValue = 'ON';
+    //       break;
+    //     case 'list':
+    //       defaultValue = 'EXTRACT';
+    //       break;
+    //     case 'value':
+    //       defaultValue = 'ON';
+    //       break;
+    //     default:
+    //       break;
+    //   }
+    //   Vue.set(this.schema, 'status', defaultValue);
+    //   this.schema.status = defaultValue;
+    // }
+  }
 })
 Vue.component('x-separator', {
   props: ['offset', 'direction', 'w', 'h', 'top', 'left',],
@@ -668,19 +939,16 @@ Vue.component('x-separator', {
   },
   methods: {
     startDrag: function(e) {
-      // console.log("startDrag");
       this.mouseDownPos.x = e.x + this.offset.x;
       this.mouseDownPos.y = e.y + this.offset.y;
     },
     onDrag: function(e) {
       if (this.mouseDownPos.x) {
-        // console.log("onDrag");
         this.offset.x = this.mouseDownPos.x - e.x;
         this.offset.y = this.mouseDownPos.y - e.y;
       }
     },
     stopDrag: function(e) {
-      // console.log("stopDrag");
       this.mouseDownPos.x = null;
       this.mouseDownPos.y = null;
     }
@@ -777,13 +1045,14 @@ Vue.component('x-table', {
           }
         }
         tmpProperties.forEach(prop => properties.push({key: prop}));
-        return properties;
+      } else {
+        this.definitions.forEach(def => {
+          for (key in def.properties) {
+            properties.push({key});
+          }
+        })
       }
-      this.definitions.forEach(def => {
-        for (key in def.properties) {
-          properties.push({key});
-        }
-      })
+      properties.sort((prop1, prop2) => prop1.key > prop2.key ? 1 : -1);
       return properties;
     },
     showingFrom: function() {
@@ -864,6 +1133,7 @@ var app = new Vue({
     csvdata: [],
     upperMiddleSeparatorOffset: {x: 0, y: 0},
     middleSeparatorOffset: {x: 0, y: 0},
+    schema,
   },
   computed: {
     leftPanelWidth: function() {
