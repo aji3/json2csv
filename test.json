@@ -145,6 +145,27 @@ List of objects
   ]
 }
 
+
+{
+  "aa": "bb",
+  "list":[
+    {
+      "cc": "dd",
+      "ee": {
+        "ff": "gg1",
+        "hh": "ii1"
+      }
+    },
+    {
+      "cc": "dd2",
+      "ee": {
+        "ff": "gg2",
+        "hh": "ii2"
+      }
+    }
+  ]
+}
+
 aa
 list[]
 list[].cc
