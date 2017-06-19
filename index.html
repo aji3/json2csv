@@ -678,8 +678,8 @@ Vue.component('x-json', {
 
         this.csvdata.splice(0, this.csvdata.length);
 
-        var context = new FlattenContext();
-        context.setSchema(schema.root);
+        // var context = new FlattenContext();
+        // context.setSchema(schema.root);
 
         var list = null;
         if (Array.isArray(this.jsonObject)) {
@@ -688,8 +688,8 @@ Vue.component('x-json', {
           list = [this.jsonObject];
         }
 
-        const value = SuperFlatten.superflatten(list);
-        console.log(value);
+        const value = SuperFlatten.superflatten(list, schema.root);
+        // console.log(value);
         Array.prototype.push.apply(this.csvdata, value);
       }
     }
@@ -807,7 +807,7 @@ Vue.component('x-config', {
   <div style="height: 40px;">
     count: {{count}}
   </div>
-  <div style="width: 100%; height: 100%; overflow: scroll; ">
+  <div style="width: 100%; height: calc(100% - 40px); overflow: scroll; ">
     <x-config-treeview :schema="schema" isroot="true"></x-config-treeview>
   </div>
 </x-panel>
@@ -830,7 +830,7 @@ Vue.component('x-config-treeview', {
         </div>
         <div v-if="type == 'list'" style="padding-bottom: 2px;">
           <button class="status_button" :class="{active: schema.status == 'ON'}" @click="schema.status = 'ON'">ON</button><!--
-          --><button class="status_button" :class="{active: schema.status == 'AS_OBJECT'}" @click="schema.status = 'AS_OBJECT'">AS_OBJECT</button><!--
+          --><button class="status_button" :class="{active: schema.status == 'AS_OBJECT'}" @click="schema.status = 'AS_OBJECT'">AS OBJECT</button><!--
           --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="schema.status = 'OFF'">OFF</button>
         </div>
         <div v-if="type == 'value'" style="padding-bottom: 2px;">

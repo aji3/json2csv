@@ -61,7 +61,8 @@ OK??
         "ff": true
       }
     }
-  }
+  },
+  "test8": {}
 }
 
 test[]
@@ -89,6 +90,37 @@ test2[].bb
     }
   }
 }
+
+
+
+{
+  "test":[
+    [{"aa": "vaclue1aaa",
+      "bb": "valsae1bb"},
+     {"aa": "tesdsxat",
+      "bb": "testz2"}],
+    [{"aa": "valuaea2aa",
+      "bb": "valude2zsdsbsb"}],
+    [{"aa": "valu6zed3aa",
+      "bb": "valued3bb"}]
+  ]
+}
+
+test[].[] - asObject 
+
+test[].[].aa -> test[].0.aa
+test[].[].bb -> test[].0.bb
+test[].[].aa -> test[].1.aa
+test[].[].bb -> test[].1.bb
+
+test[].0.aa
+test[].0.bb
+test[].1.aa
+test[].1.bb
+test[].0.aa
+test[].0.bb
+test[].0.aa
+test[].0.bb
 
 
 -------------------------------

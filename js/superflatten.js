@@ -1,12 +1,34 @@
-const SuperFlatten = (function() {
+var SuperFlatten = SuperFlatten || (function() {
+  "use strict"
   SuperFlattenContext: {
-    function SuperFlattenContext() {
+    var SuperFlattenContext = function() {
       this.names = [];
       this.values = [];
       this.types = [];
       this.root = [];
+      this.schemaMap = null;
     }
     const p = SuperFlattenContext.prototype;
+    p.setSchema = function(schema) {
+      const schemaMap = {};
+      const schemaConverter = function(schema) {
+        schemaMap[schema.originalName] = schema;
+        for (const key in schema.children) {
+          const child = schema.children[key];
+          schemaConverter(child);
+        }
+      };
+      schemaConverter(schema);
+      console.log(schemaMap);
+      this.schemaMap = schemaMap;
+    }
+    p.getStatus = function(key) {
+      // console.log(this.getCurrentName());
+      if (!this.schemaMap) {
+        return 'ON';
+      }
+      return this.schemaMap[this.getCurrentName(key)] ? this.schemaMap[this.getCurrentName(key)].status : 'ON';
+    }
     p.getCurrentName = function(key) {
       let ret = "";
       this.names.forEach(name => {
@@ -33,6 +55,9 @@ const SuperFlatten = (function() {
         return this.values[this.values.length - 1];
       }
     }
+    p.setCurrentType = function(type) {
+      this.types[this.types.length - 1] = type;
+    }
     p.getCurrentType = function() {
       if (this.types.length === 0) {
         return 'list';
@@ -56,12 +81,29 @@ const SuperFlatten = (function() {
       obj[name] = value;
       this.getCurrentValues().push(obj);
     }
-    p.endList = function() {
+    p.endList = function(forcedToBeList) {
       const list = this.values.pop();
       this.applyResult(list);
     }
-    p.endObject = function() {
+    p.endObject = function(forcedToBeObject) {
       const list = this.values.pop();
+      if (forcedToBeObject) {
+        // The object is forcedToBeObject means that it is originally a list but the superflatten result should be converted to object.
+        // The object which is originally came from a list has items with name of xxx[].aaa, xxx[].bbb, etc.
+        // To force it to be object, this name should be converted to xxx.0.aaa, xxx.0.bbb, xxx.1.aaa, xxx.1.bbb, etc. 
+        const currentName = this.getCurrentName();
+        for (let i = 0; i < list.length; i++) {
+          const obj = list[i];
+          const newObj = {};
+          const newKeyReplacer = currentName.substring(0, currentName.length - 1) + i + ']';
+          for (const key in obj) {
+            const newKey = key.replace(currentName, newKeyReplacer);
+            console.log(newKey);
+            newObj[newKey] = obj[key];
+          }
+          list[i] = newObj;
+        }
+      }
       let resultList = [];
       for (var i = 0; i < list.length; i++) {
         let obj = list[i];
@@ -103,10 +145,6 @@ const SuperFlatten = (function() {
       this.names.pop();
       const type = this.getCurrentType();
       const resultList = this.getCurrentValues();
-      // if (!type) {
-      //   // !type is when context shows the root of this object.
-      //   Array.prototype.push.apply(this.root, list);
-      // } else
       if (type === 'list') {
         Array.prototype.push.apply(resultList, list);
       } else if (type === 'object') {
@@ -116,43 +154,166 @@ const SuperFlatten = (function() {
       }
     }
   }
+  //
+  // const superflattenList = function(list, context) {
+  //   const status = context.getStatus() || SuperFlattenStatus.list.on;
+  //   console.log(context.getCurrentName() + " - " + status);
+  //   if (status === SuperFlattenStatus.list.asObject) {
+  //     const convertedObject = {};
+  //     for (var i = 0; i < list.length; i++) {
+  //       const tmp = list[i];
+  //       convertedObject[i] = tmp;
+  //     }
+  //     // context.setCurrentType(Type.object);
+  //     context.startObject('{}');
+  //     superflattenObject(convertedObject, context);
+  //     context.endObject();
+  //     return;
+  //   } else {
+  //
+  //   }
+  //
+  //
+  //   for (var i = 0; i < list.length; i++) {
+  //     const obj = list[i];
+  //     if (Array.isArray(obj)) {
+  //       const status = context.getStatus() || SuperFlattenStatus.list.on;
+  //       console.log(context.getCurrentName() + " - " + status);
+  //       if (status === SuperFlattenStatus.list.on) {
+  //         context.startList('[]');
+  //         superflattenList(obj, context);
+  //         context.endList();
+  //       } else if (status === SuperFlattenStatus.list.asObject) {
+  //         const convertedObject = {};
+  //         for (var i = 0; i < obj.length; i++) {
+  //           const tmp = obj[i];
+  //           convertedObject[i] = tmp;
+  //         }
+  //         context.startObject('{}');
+  //         superflattenObject(convertedObject, context);
+  //         context.endObject();
+  //       } else {
+  //         // SuperFlattenStatus.list.off
+  //       }
+  //     } else if (typeof obj === 'object') {
+  //       const status = context.getStatus() || SuperFlattenStatus.object.on;
+  //       console.log(context.getCurrentName() + " - " + status);
+  //       if (status === SuperFlattenStatus.object.on) {
+  //         context.startObject('{}');
+  //         superflattenObject(obj, context);
+  //         context.endObject();
+  //       } else if (status === SuperFlattenStatus.object.asList) {
+  //         context.startList('[]');
+  //         const convertedList = [];
+  //         for (const key in obj) {
+  //           obj['_id'] = key;
+  //           convertedList.push(obj[key]);
+  //         }
+  //         superflattenList(convertedList, context);
+  //         context.endList();
+  //       } else {
+  //         // SuperFlattenStatus.object.off
+  //       }
+  //     } else {
+  //       const status = context.getStatus() || SuperFlattenStatus.value.on;
+  //       console.log(context.getCurrentName() + " - " + status);
+  //       context.addValue(null, obj);
+  //     }
+  //   }
+  // }
+
 
   const superflattenList = function(list, context) {
+    // const status = context.getStatus() || SuperFlattenStatus.list.on;
+    // console.log(context.getCurrentName() + " - " + status);
+
     for (var i = 0; i < list.length; i++) {
       const obj = list[i];
       if (Array.isArray(obj)) {
         context.startList('[]');
+        const status = context.getStatus() || SuperFlattenStatus.list.on;
+        console.log(context.getCurrentName() + " - " + status);
         superflattenList(obj, context);
-        context.endList();
+        // context.endList();
+        if (status === SuperFlattenStatus.list.asObject) {
+          context.endObject(true);
+        } else {
+          context.endList();
+        }
+
       } else if (typeof obj === 'object') {
         context.startObject('{}');
+        const status = context.getStatus() || SuperFlattenStatus.object.on;
+        console.log(context.getCurrentName() + " - " + status);
         superflattenObject(obj, context);
         context.endObject();
       } else {
+        const status = context.getStatus() || SuperFlattenStatus.value.on;
+        console.log(context.getCurrentName() + " - " + status);
         context.addValue(null, obj);
       }
     }
   }
+  //
+  // const superflattenObject = function(obj, context) {
+  //   for (const key in obj) {
+  //     const value = obj[key];
+  //     if (Array.isArray(value)) {
+  //       const status = context.getStatus(key) || SuperFlattenStatus.list.on;
+  //       console.log(context.getCurrentName(key) + " - " + status);
+  //       context.startList(key);
+  //       superflattenList(value, context);
+  //       context.endList();
+  //     } else if (typeof value === 'object') {
+  //       const status = context.getStatus(key) || SuperFlattenStatus.object.on;
+  //       console.log(context.getCurrentName(key) + " - " + status);
+  //       context.startObject(key);
+  //       superflattenObject(value, context);
+  //       context.endObject();
+  //     } else {
+  //       const status = context.getStatus(key) || SuperFlattenStatus.value.on;
+  //       console.log(context.getCurrentName(key) + " - " + status);
+  //       context.addValue(key, value);
+  //     }
+  //   }
+  // }
 
-  const superflattenObject = function(obj, context) {
-    for (const key in obj) {
-      const value = obj[key];
-      if (Array.isArray(value)) {
-        context.startList(key);
-        superflattenList(value, context);
-        context.endList();
-      } else if (typeof value === 'object') {
-        context.startObject(key);
-        superflattenObject(value, context);
-        context.endObject();
-      } else {
-        context.addValue(key, value);
+    const superflattenObject = function(obj, context) {
+      // const status = context.getStatus() || SuperFlattenStatus.object.on;
+      // console.log(context.getCurrentName() + " - " + status);
+
+      for (const key in obj) {
+        const value = obj[key];
+        if (Array.isArray(value)) {
+          context.startList(key);
+          const status = context.getStatus() || SuperFlattenStatus.list.on;
+          console.log(context.getCurrentName() + " - " + status);
+          superflattenList(value, context);
+          // context.endList();
+
+          if (status === SuperFlattenStatus.list.asObject) {
+            context.endObject(true);
+          } else {
+            context.endList();
+          }
+        } else if (typeof value === 'object') {
+          context.startObject(key);
+          const status = context.getStatus() || SuperFlattenStatus.object.on;
+          console.log(context.getCurrentName() + " - " + status);
+          superflattenObject(value, context);
+          context.endObject();
+        } else {
+          const status = context.getStatus(key) || SuperFlattenStatus.value.on;
+          console.log(context.getCurrentName(key) + " - " + status);
+          context.addValue(key, value);
+        }
       }
     }
-  }
-
   const superflatten = function(obj, schema) {
     const context = new SuperFlattenContext();
+    if (schema) {
+      context.setSchema(schema);
+    }
     if (Array.isArray(obj)) {
       superflattenList(obj, context);
     } else if (typeof obj === 'object') {
@@ -164,7 +325,7 @@ const SuperFlatten = (function() {
   }
 
   SuperFlattenCreateSchemaContext: {
-    function SuperFlattenCreateSchemaContext() {
+    var SuperFlattenCreateSchemaContext = function() {
       SuperFlattenContext.call(this);
     }
     Object.setPrototypeOf(SuperFlattenCreateSchemaContext.prototype, SuperFlattenContext.prototype);
@@ -220,12 +381,13 @@ const SuperFlatten = (function() {
       off: 'OFF'
     }
   }
-  const Schema = function(type, name) {
+  const Schema = function(type, name, originalName) {
     this.type = type;
     this.name = name;
     this.parent = null;
     this.children = {};
     this.listSize = 0;
+    this.originalName = originalName;
 
     switch (type) {
       case 'object':
@@ -284,13 +446,18 @@ const SuperFlatten = (function() {
     } else {
       rootType = Type.value;
     }
-    const rootSchema = new Schema(rootType, '#root');
+    const rootSchema = new Schema(rootType, '#root', '');
     context.root.forEach(elem => {
       let parentSchema = rootSchema;
       const names = elem.split('.');
+      let originalName = '';
       for (let i = 0; i < names.length; i++) {
         let name = names[i];
         let type = null;
+        if (originalName.length > 0) {
+          originalName += '.';
+        }
+        originalName += name;
         if (name.endsWith('[]')) {
           type = Type.list;
           if (name.length > 2) {
@@ -301,7 +468,7 @@ const SuperFlatten = (function() {
         } else {
           type = Type.value;
         }
-        const schema = new Schema(type, name);
+        const schema = new Schema(type, name, originalName);
         parentSchema = parentSchema.addChild(schema);
       }
     });
@@ -318,9 +485,10 @@ const SuperFlatten = (function() {
     return count;
   }
   const countListSize = function(list, schema) {
-    if (schema.status === SuperFlattenStatus.list.off) {
+    const status = schema ? schema.status : SuperFlattenStatus.list.on;
+    if (status === SuperFlattenStatus.list.off) {
       return 0;
-    } else if (schema.status === SuperFlattenStatus.list.asObject) {
+    } else if (status === SuperFlattenStatus.list.asObject) {
       if (list.length > 0) {
         return 1;
       } else {
@@ -331,12 +499,12 @@ const SuperFlatten = (function() {
     for (var i = 0; i < list.length; i++) {
       var obj = list[i];
       if (Array.isArray(obj)) {
-        var childSchema = schema.getChild('[]');
+        var childSchema = schema ? schema.getChild('[]') : null;
         count += countListSize(obj, childSchema);
       } else if (typeof obj === 'object') {
         count += countObjectSize(obj, schema);
       } else {
-        if (schema.status === SuperFlattenStatus.list.on) {
+        if (status === SuperFlattenStatus.list.on) {
           count++;
         }
       }
@@ -344,13 +512,14 @@ const SuperFlatten = (function() {
     return count;
   }
   function countObjectSize(object, schema) {
-    if (schema.status === SuperFlattenStatus.object.off) {
+    const status = schema ? schema.status : SuperFlattenStatus.object.on;
+    if (status === SuperFlattenStatus.object.off) {
       return 1;
     }
     var count = 1;
     for (var key in object) {
       var obj = object[key];
-      var childSchema = schema.children[key];
+      var childSchema = schema ? schema.children[key] : null;
       var tmp = 0;
       if (Array.isArray(obj)) {
         tmp = countListSize(obj, childSchema);
@@ -359,11 +528,11 @@ const SuperFlatten = (function() {
       } else {
       }
       if (tmp != 0) {
-        if (schema.status === SuperFlattenStatus.object.on) {
+        if (status === SuperFlattenStatus.object.on) {
           count *= tmp;
-        } else if (schema.status === SuperFlattenStatus.object.asList){
+        } else if (status === SuperFlattenStatus.object.asList){
           count += tmp;
-        } else if (schema.status === SuperFlattenStatus.object.off){
+        } else if (status === SuperFlattenStatus.object.off){
           // OFF - no operation
         } else {
           count *= tmp;
