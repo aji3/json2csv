@@ -198,10 +198,96 @@ List of objects
   ]
 }
 
+
+{
+  "aa": "bb",
+  "list":[
+    {
+      "cc": "dd",
+      "ee": {
+        "ff": ["gg11", "gg12"],
+        "hh": ["ii11", "ii12"]
+      }
+    },
+    {
+      "cc": "dd2",
+      "ee": {
+        "ff": ["gg21", "gg22"],
+        "hh": ["ii21", "ii22"]
+      }
+    }
+  ]
+}
+
+{
+  "aa": "bb",
+  "list":[
+    {
+      "cc": "dd",
+      "ee": {
+        "ff": [
+          {"aa": "gg11"},
+          {"aa": "gg12"}
+        ],
+        "hh": [
+          {"bb": "ii11"}, 
+          {"bb": "ii12"}
+        ]
+      }
+    },
+    {
+      "cc": "dd2",
+      "ee": {
+        "ff": [
+          {"aa": "gg21"},
+          {"aa": "gg22"}
+        ],
+        "hh": [
+          {"bb": "ii21"}, 
+          {"bb": "ii22"}
+        ]
+      }
+    }
+  ]
+}
+
 aa
 list[]
 list[].cc
 list[].ee
+
+
+
+{
+"test":
+  {
+  "aaa": 
+    {
+      "name": "AAAA", 
+      "age": 30
+    },
+  "bbb":
+    {
+      "name": "BBBB",
+      "age": 35
+    }
+  }
+}
+
+{
+  "test": [
+    {
+      "_id": "aaa",
+      "name": "AAAA", 
+      "age": 30
+    },
+    {
+      "_id": "bbb",
+      "name": "BBBB",
+      "age": 35
+    }
+  ]
+}
 
 -------------------------------
 List of list
