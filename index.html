@@ -665,21 +665,12 @@ Vue.component('x-json', {
           schema.root = testSchema;
         }
         console.log(schema.root);
-        // var count = 0;
-        // if (Array.isArray(this.jsonObject)) {
-        //   count = countListSize(this.jsonObject, schema.root);
-        // } else {
-        //   count = countObjectSize(this.jsonObject, schema.root);
-        // }
-        // console.log(count);
+
         const count = SuperFlatten.countSize(this.jsonObject, schema.root);
         console.log(count);
         schema.count = count;
 
         this.csvdata.splice(0, this.csvdata.length);
-
-        // var context = new FlattenContext();
-        // context.setSchema(schema.root);
 
         var list = null;
         if (Array.isArray(this.jsonObject)) {
@@ -866,24 +857,6 @@ Vue.component('x-config-treeview', {
     },
   },
   mounted: function() {
-    // if (this.schema) {
-    //   var defaultValue = '';
-    //   switch (this.schema.type) {
-    //     case 'object':
-    //       defaultValue = 'ON';
-    //       break;
-    //     case 'list':
-    //       defaultValue = 'EXTRACT';
-    //       break;
-    //     case 'value':
-    //       defaultValue = 'ON';
-    //       break;
-    //     default:
-    //       break;
-    //   }
-    //   Vue.set(this.schema, 'status', defaultValue);
-    //   this.schema.status = defaultValue;
-    // }
   }
 })
 Vue.component('x-separator', {
@@ -1136,16 +1109,6 @@ var app = new Vue({
     }
   },
   methods: {
-    // focusJsonPanel: function() {
-    //   console.log("sss");
-    //   upperMiddleSeparatorOffset.x = 200;
-    //   middleSeparatorOffset.y = 100;
-    // },
-    // focusConfigPanel: function() {
-    //   console.log("xxx");
-    //   upperMiddleSeparatorOffset.x = -200;
-    //   middleSeparatorOffset.y = 100;
-    // },
   }
 });
 </script>

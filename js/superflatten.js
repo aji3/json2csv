@@ -65,22 +65,31 @@ var SuperFlatten = SuperFlatten || (function() {
         return this.types[this.types.length - 1];
       }
     }
-    p.startObject = function(objectName) {
+    p.startChild = function(type, name) {
       this.values.push([]);
-      this.names.push(objectName);
-      this.types.push('object');
-    }
-    p.startList = function(listName) {
-      this.values.push([]);
-      // this.names.push(listName === '[]' ? listName : listName + '[]');
-      this.names.push(listName);
-      this.types.push('list');
+      this.names.push(name);
+      this.types.push(type);
     }
     p.addValue = function(key, value) {
       let obj = {};
       let name = this.getCurrentName(key);
       obj[name] = value;
       this.getCurrentValues().push(obj);
+    }
+    p.endChild = function(type, status) {
+      if (type === Type.list) {
+        if (status === SuperFlattenStatus.list.asObject) {
+          this.endObject(true);
+        } else {
+          this.endList();
+        }
+      } else if (type === Type.object) {
+        if (status === SuperFlattenStatus.object.asList) {
+          this.endList(true);
+        } else {
+          this.endObject();
+        }
+      }
     }
     p.endList = function(forcedToBeList) {
       const list = this.values.pop();
@@ -204,25 +213,16 @@ var SuperFlatten = SuperFlatten || (function() {
           const name = '[]';
           const status = context.getStatus(name);
           console.log(context.getCurrentName(name) + " - " + status);
-          context.startList(name);
+          context.startChild(Type.list, name);
           superflattenList(obj, context);
-          if (status === SuperFlattenStatus.list.asObject) {
-            context.endObject(true);
-          } else {
-            context.endList();
-          }
-
+          context.endChild(Type.list, status);
         } else if (typeof obj === 'object') {
           const name = '{}';
           const status = context.getStatus(name);
           console.log(context.getCurrentName(name) + " - " + status);
-          context.startObject(name);
+          context.startChild(Type.object, name);
           superflattenObject(obj, context);
-          if (status === SuperFlattenStatus.object.asList) {
-            context.endList(true);
-          } else {
-            context.endObject();
-          }
+          context.endChild(Type.object, status);
         } else {
           const status = context.getStatus();
           console.log(context.getCurrentName() + " - " + status);
@@ -233,29 +233,17 @@ var SuperFlatten = SuperFlatten || (function() {
     var superflattenObject = function(obj, context) {
       for (const key in obj) {
         const value = obj[key];
+        const status = context.getStatus(key);
+        console.log(context.getCurrentName(key) + " - " + status);
         if (Array.isArray(value)) {
-          const status = context.getStatus(key);
-          console.log(context.getCurrentName(key) + " - " + status);
-          context.startList(key);
+          context.startChild(Type.list, key);
           superflattenList(value, context);
-          if (status === SuperFlattenStatus.list.asObject) {
-            context.endObject(true);
-          } else {
-            context.endList();
-          }
+          context.endChild(Type.list, status);
         } else if (typeof value === 'object') {
-          const status = context.getStatus(key);
-          console.log(context.getCurrentName(key) + " - " + status);
-          context.startObject(key);
+          context.startChild(Type.object, key);
           superflattenObject(value, context);
-          if (status === SuperFlattenStatus.object.asList) {
-            context.endList(true);
-          } else {
-            context.endObject();
-          }
+          context.endChild(Type.object, status);
         } else {
-          const status = context.getStatus(key);
-          console.log(context.getCurrentName(key) + " - " + status);
           context.addValue(key, value);
         }
       }
@@ -270,13 +258,8 @@ var SuperFlatten = SuperFlatten || (function() {
     }
     Object.setPrototypeOf(SuperFlattenCreateSchemaContext.prototype, SuperFlattenContext.prototype);
     const p = SuperFlattenCreateSchemaContext.prototype;
-    p.startObject = function(name) {
-      let schema = new Schema(Type.object, name);
-      schema = this.currentSchema.addChild(schema);
-      this.currentSchema = schema;
-    }
-    p.startList = function(name) {
-      let schema = new Schema(Type.list, name);
+    p.startChild = function(type, name) {
+      let schema = new Schema(type, name);
       schema = this.currentSchema.addChild(schema);
       this.currentSchema = schema;
     }
