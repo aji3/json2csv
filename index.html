@@ -167,7 +167,7 @@ table {
   </style>
 </head>
 <body>
-  <header class="header"><h2 style="font-size: 2em;">JSON to CSV</h2></header>
+  <header class="header"><h2 style="font-size: 2em; font-style: italic">superflatten</h2></header>
   <div id="app" class="content">
     <div style="height: 100% position: relative;">
       <x-row :h="'50% - ' + middleSeparatorOffset.y + 'px'">
@@ -378,7 +378,7 @@ Vue.component('x-config-treeview', {
       <div style="display: inline-block; width: calc(100% - 205px); overflow: hidden; min-width: 100px; height: 20px;" v-if="name">
         <span style="">{{name}}</span>: <span style="font-weight: bold;">{{type}}</span>
       </div>
-      <div style="display: inline-block; width: 200px;" v-if="!isroot">
+      <div style="display: inline-block; width: 200px;">
         <div v-if="type == 'object'" style="padding-bottom: 2px;">
           <button class="status_button" :class="{active: schema.status == 'ON'}" @click="updateSchemaStatus(schema, 'ON')">ON</button><!--
           --><button class="status_button" :class="{active: schema.status == 'AS_LIST'}" @click="updateSchemaStatus(schema, 'AS_LIST')">AS LIST</button><!--
@@ -669,10 +669,14 @@ const store = new Vuex.Store(
     mutations: {
       updateJsonStr: (state, jsonStr) => {
         state.jsonStr = jsonStr;
-        state.jsonSchema = SuperFlatten.createSchema(store.getters.jsonObject);
+        if (!state.jsonSchema) {
+          state.jsonSchema = SuperFlatten.createSchema(store.getters.jsonObject);
+        }
       },
       updateSchemaStatus: (state, args) => {
+        console.log(state);
         args.schema.status = args.status;
+        // state.jsonSchema.status = 'OFF';
       },
     },
     getters: {
@@ -687,17 +691,17 @@ const store = new Vuex.Store(
       },
       csvdata: (state) => {
         const jsonObject = store.getters.jsonObject;
-        var list = null;
-        if (jsonObject) {
-          if (Array.isArray(jsonObject)) {
-            list = jsonObject;
-          } else {
-            list = [jsonObject];
-          }
-        } else {
-          list = [];
-        }
-        return SuperFlatten.superflatten(list, state.jsonSchema);
+        // var list = null;
+        // if (jsonObject) {
+        //   if (Array.isArray(jsonObject)) {
+        //     list = jsonObject;
+        //   } else {
+        //     list = [jsonObject];
+        //   }
+        // } else {
+        //   list = [];
+        // }
+        return SuperFlatten.superflatten(jsonObject, state.jsonSchema);
       },
       csvdataCount: (state) => {
         return SuperFlatten.countSize(store.getters.jsonObject, state.jsonSchema);
