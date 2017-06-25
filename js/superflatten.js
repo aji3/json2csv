@@ -19,7 +19,7 @@ var SuperFlatten = SuperFlatten || (function() {
         }
       };
       schemaConverter(schema);
-      console.log(schemaMap);
+      // console.log(schemaMap);
       this.schemaMap = schemaMap;
     }
     p.getStatus = function(key) {
@@ -212,20 +212,20 @@ var SuperFlatten = SuperFlatten || (function() {
         if (Array.isArray(obj)) {
           const name = '[]';
           const status = context.getStatus(name);
-          console.log(context.getCurrentName(name) + " - " + status);
+          // console.log(context.getCurrentName(name) + " - " + status);
           context.startChild(Type.list, name);
           superflattenList(obj, context);
           context.endChild(Type.list, status);
         } else if (typeof obj === 'object') {
           const name = '{}';
           const status = context.getStatus(name);
-          console.log(context.getCurrentName(name) + " - " + status);
+          // console.log(context.getCurrentName(name) + " - " + status);
           context.startChild(Type.object, name);
           superflattenObject(obj, context);
           context.endChild(Type.object, status);
         } else {
           const status = context.getStatus();
-          console.log(context.getCurrentName() + " - " + status);
+          // console.log(context.getCurrentName() + " - " + status);
           context.addValue(null, obj);
         }
       }
@@ -234,7 +234,7 @@ var SuperFlatten = SuperFlatten || (function() {
       for (const key in obj) {
         const value = obj[key];
         const status = context.getStatus(key);
-        console.log(context.getCurrentName(key) + " - " + status);
+        // console.log(context.getCurrentName(key) + " - " + status);
         if (Array.isArray(value)) {
           context.startChild(Type.list, key);
           superflattenList(value, context);

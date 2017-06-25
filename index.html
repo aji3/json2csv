@@ -3,6 +3,7 @@
   <meta charset="utf-8">
 
   <script src="./js/vue.js"></script>
+  <script src="./js/vuex.js"></script>
   <script src="./js/superflatten.js"></script>
   <style>
 
@@ -170,435 +171,19 @@ table {
   <div id="app" class="content">
     <div style="height: 100% position: relative;">
       <x-row :h="'50% - ' + middleSeparatorOffset.y + 'px'">
-        <x-json :csvdata="csvdata" :w="leftPanelWidth" ></x-json>
+        <x-json :w="leftPanelWidth" ></x-json>
         <x-separator :offset="upperMiddleSeparatorOffset" direction="horizontal" :h="'50% - 18px - ' + middleSeparatorOffset.y + 'px'" w="5px" top="40px" left="70%"></x-separator>
-        <x-config :schema="schema.root" :count="schema.count" :w="rightPanelWidth" h="100%" ></x-config>
+        <x-config :w="rightPanelWidth" h="100%" ></x-config>
       </x-row>
       <x-row :h="'50% + ' + middleSeparatorOffset.y + 'px'">
         <x-separator :offset="middleSeparatorOffset" direction="vertical" h="5px" w="100%" top="50% + 20px" left="0px"></x-separator>
-        <x-csv :csvdata="csvdata"></x-csv>
+        <x-csv></x-csv>
       </x-row>
     </div>
   </div>
 
 
 <script>
-
-function FlattenContext() {
-  this.names = [];
-  this.schema = null;
-  this.flattenedSchema = {};
-}
-FlattenContext.prototype.getNames = function() {
-  return this.names;
-}
-FlattenContext.prototype.setSchema = function(schema) {
-  this.schema = schema;
-  this.flattenedSchema = this.flattenSchema(schema, new FlattenContext());
-  // console.log(this.flattenedSchema);
-}
-FlattenContext.prototype.flattenSchema = function(schema, context) {
-  var ret = {};
-  ret[context.currentName()] = schema;
-  for (var key in schema.children) {
-    var child = schema.children[key];
-    context.push(key);
-    Object.assign(ret, this.flattenSchema(child, context));
-    context.pop();
-  }
-  return ret;
-}
-FlattenContext.prototype.push = function(name) {
-  this.names.push(name);
-}
-FlattenContext.prototype.pop = function() {
-  this.names.splice(this.names.length - 1, 1);
-}
-FlattenContext.prototype.currentName = function() {
-  var ret = "";
-  for (var i = 0; i < this.names.length; i++) {
-    var name = this.names[i];
-    if (ret.length > 0) {
-      ret += ".";
-    }
-    ret += name;
-  }
-  return ret;
-}
-FlattenContext.prototype.getExtractStatus = function(key) {
-  if (!key) {
-    key = '';
-  }
-  var name = this.currentName();
-  if (name.length === 0) {
-    name = key;
-  } else {
-    name += (key.length > 0 ? '.' : '') + key;
-  }
-  return this.flattenedSchema[name].status;
-}
-
-// function flatten(obj, context) {
-//   if (!context) {
-//     context = new FlattenContext();
-//   }
-//   if (Array.isArray(obj) ) {
-//     const ret = [];
-//     obj.forEach(elem => {
-//       ret.push(flatten(elem, context));
-//     });
-//     return ret;
-//   } else if (typeof obj === 'object') {
-//     var ret = {};
-//     for (key in obj) {
-//       const value = obj[key];
-//       context.push(key);
-//       Object.assign(ret, flatten(value, context));
-//       context.pop();
-//     }
-//     return ret;
-//   } else {
-//     const ret = {};
-//     ret[context.currentName()] = obj;
-//     return ret;
-//   }
-// }
-
-// function extract(obj, name) {
-//   const ret = [];
-//   const list = obj[name];
-//   for (var i = 0; i < list.length; i++) {
-//     const elem = list[i];
-//     const retObj = Object.assign({}, obj);
-//     delete retObj[name];
-//     ret.push(retObj);
-//     var thisName = name + "";
-//     if (typeof elem === 'object') {
-//       if (Array.isArray(elem)) {
-//         retObj[thisName + ".[]"] = elem;
-//       } else {
-//         for (key in elem) {
-//           retObj[thisName + "." + key] = elem[key];
-//         }
-//       }
-//     } else {
-//       retObj[thisName] =  elem;
-//     }
-//   }
-//   return ret;
-// }
-
-function getArrayNameList(obj) {
-  const ret = [];
-  for (key in obj) {
-    if (Array.isArray(obj[key])) {
-      ret.push(key);
-    }
-  }
-  return ret;
-}
-
-function hasArray(obj) {
-  for(var key in obj) {
-    var elem = obj[key];
-    if (Array.isArray(elem)) {
-      return true;
-    } else if (typeof elem === 'object') {
-      var ret = hasArray(elem);
-      if (ret) {
-        return true;
-      }
-    } else {
-      // no operation
-    }
-  }
-  return false;
-}
-
-// function extractAll(list, context) {
-//   if (!context) {
-//     context = new FlattenContext();
-//   }
-//   const extractStatus = context.getExtractStatus();
-//   if (extractStatus === 'OFF') {
-//     return [];
-//   }
-//   // console.log(context.currentName() + ":" + extractStatus);
-//   var extractedList = [];
-//   var noExtractList = [];
-//   var extracted = false;
-//   for (var i = 0; i < list.length; i++) {
-//     var obj = list[i];
-//     var thisObjExtracted = false;
-//     if (Array.isArray(obj)) {
-//       // if "obj" is list, then flatten it.
-//       // [[1, 2], [3], [4, 5], ...] -> [1, 2, 3, 4, 5, ]
-//       if (extractStatus === 'FLATTEN') {
-//         // console.log("test");
-//         var tmp = {};
-//         for (var j = 0; j < obj.length; j++) {
-//           tmp[j] = obj[j];
-//         }
-//         const childList = [tmp];
-//         while(extractAll(childList, context)) {};
-//         Array.prototype.push.apply(extractedList, childList);
-//       } else {
-//         Array.prototype.push.apply(extractedList, obj);
-//         extracted = true;
-//         thisObjExtracted = true;
-//       }
-//     } else if (typeof obj === 'object') {
-//       // if "obj" is object, then loop for all the elements in the object
-//       for (var key in obj) {
-//         // console.log(key);
-//         const childExtractStatus = context.getExtractStatus(key);
-//         if (childExtractStatus === 'OFF') {
-//           delete obj[key];
-//         }
-//         var elem  = obj[key];
-//         // if (childExtractStatus === 'FLATTEN') {
-//         //   elem = {};
-//         //   for (var i = 0; i < obj[key].length; i++) {
-//         //     var tmp = obj[key][i];
-//         //     elem[i] = tmp;
-//         //   }
-//         //   obj[key] = elem;
-//         // }
-//         if (Array.isArray(elem)) {
-//           // if elem is list, then extract the list
-//           // console.log(childExtractStatus);
-//           if (elem.length > 0) {
-//             Array.prototype.push.apply(extractedList, extract(obj, key));
-//             extracted = true;
-//             thisObjExtracted = true;
-//             break;
-//           } else {
-//             delete obj[key];
-//           }
-//         } else if (typeof elem === 'object') {
-//           if (hasArray(elem)) {
-//             // if the "elem" contains list, then extract
-//             var extractedCount = 0;
-//             const childList = [elem];
-//             context.push(key);
-//             while(extractAll(childList, context)) {extractedCount++;};
-//             context.pop();
-//             if (extractedCount > 0) {
-//               obj[key] = childList;
-//               return true;
-//             }
-//           }
-//           continue;
-//         } else {
-//           // list of value not need to be extracted
-//         }
-//       }
-//     } else {
-//       // list of value not need to be extracted
-//     }
-//     if (!thisObjExtracted) {
-//       noExtractList.push(obj);
-//     }
-//   }
-//   if (extracted) {
-//     list.splice(0, list.length);
-//     Array.prototype.push.apply(list, extractedList);
-//     Array.prototype.push.apply(list, noExtractList);
-//   }
-//   return extracted;
-// }
-// const Type = {
-//   object: 'object',
-//   list: 'list',
-//   value: 'value',
-// }
-// const Schema = function(type, name) {
-//   this.type = type;
-//   this.name = name;
-//   this.parent = null;
-//   this.children = {};
-//   this.listSize = 0;
-//
-//   switch (type) {
-//     case 'object':
-//       this.status = 'ON';
-//       break;
-//     case 'list':
-//       this.status = 'EXTRACT';
-//       break;
-//     case 'value':
-//       this.status = 'ON';
-//       break;
-//     default:
-//       break;
-//   }
-// }
-// Schema.prototype.getParent = function() {
-//   return this.parent;
-// }
-// Schema.prototype.setParent = function(parent) {
-//   this.parent = parent;
-// }
-// Schema.prototype.getChild = function(name) {
-//   return this.children[name];
-// }
-// Schema.prototype.addChild = function(schema) {
-//   if (!this.children[schema.getName()]) {
-//     this.children[schema.getName()] = schema;
-//   }
-//   return this.children[schema.getName()];
-// }
-// Schema.prototype.getName = function() {
-//   return this.name;
-// }
-// Schema.prototype.addListSize = function(listSize) {
-//   this.listSize += listSize;
-// }
-
-// const SchemaContext = function() {
-//   this.names = ['#root'];
-//   this.rootSchema = null;
-//   this.parentSchema = null;
-//   this.currentSchema = null;
-// }
-// // SchemaContext.prototype.registered = function() {
-// //   return this.currentSchema;
-// // }
-// SchemaContext.prototype.currentName = function() {
-//   return this.names[this.names.length - 1];
-// }
-// SchemaContext.prototype.registerSchema = function(type, name, listSize) {
-//   // console.log(type+ "," + name);
-//   var schema = new Schema(type, name);
-//   if (!this.rootSchema) {
-//     this.rootSchema = schema;
-//   }
-//   if (this.parentSchema) {
-//     schema.setParent(this.parentSchema);
-//     schema = this.parentSchema.addChild(schema);
-//   }
-//   this.currentSchema = schema;
-//   if (listSize) {
-//     schema.addListSize(listSize);
-//   }
-// }
-// SchemaContext.prototype.push = function(name) {
-//   // console.log(this.names.join() + "," + name);
-//   this.names.push(name);
-//   this.parentSchema = this.currentSchema;
-//   this.currentSchema = this.currentSchema.getChild(name);
-// }
-// SchemaContext.prototype.pop = function() {
-//   this.names.splice(this.names.length - 1, 1);
-//   this.currentSchema = this.currentSchema.getParent();
-//   this.getParent = this.currentSchema.getParent();
-// }
-
-// function countListSize(list, schema) {
-//   if (schema.status === 'OFF') {
-//     return 0;
-//   } else if (schema.status === 'AS_OBJECT') {
-//     if (list.length > 0) {
-//       return 1;
-//     } else {
-//       return 0;
-//     }
-//   }
-//   var count = 0;
-//   for (var i = 0; i < list.length; i++) {
-//     var obj = list[i];
-//     if (Array.isArray(obj)) {
-//       var childSchema = schema.children['[]'];
-//       count += countListSize(obj, childSchema);
-//     } else if (typeof obj === 'object') {
-//       count += countObjectSize(obj, schema);
-//     } else {
-//       if (schema.status === 'ON') {
-//         count++;
-//       }
-//     }
-//   }
-//   return count;
-// }
-// function countObjectSize(object, schema) {
-//   if (schema.status === 'OFF') {
-//     return 1;
-//   }
-//   var count = 1;
-//   for (var key in object) {
-//     var obj = object[key];
-//     var childSchema = schema.children[key];
-//     var tmp = 0;
-//     if (Array.isArray(obj)) {
-//       tmp = countListSize(obj, childSchema);
-//     } else if (typeof obj === 'object') {
-//       tmp = countObjectSize(obj, childSchema);
-//     } else {
-//     }
-//     if (tmp != 0) {
-//       if (schema.status === 'ON') {
-//         count *= tmp;
-//       } else if (schema.status === 'AS_LIST'){
-//         count += tmp;
-//       } else if (schema.status === 'OFF'){
-//         // OFF - no operation
-//       } else {
-//         // console.log(schema.status);
-//         count *= tmp;
-//       }
-//     }
-//   }
-//   return count;
-// }
-
-// function createSchema2(obj, context, parentIsList) {
-//   if (!context) {
-//     context = new SchemaContext();
-//   }
-//   if (!parentIsList) {
-//     parentIsList = false;
-//   }
-//   if (Array.isArray(obj)) {
-//     context.registerSchema(Type.list, context.currentName(), obj.length);
-//     obj.forEach(elem => {
-//       if (Array.isArray(elem)) {
-//         context.push('[]');
-//       }
-//       createSchema2(elem, context, true);
-//       if (Array.isArray(elem)) {
-//         context.pop();
-//       }
-//     });
-//   } else if (typeof obj === 'object') {
-//     if (!parentIsList) {
-//       context.registerSchema(Type.object, context.currentName());
-//     }
-//     for (var key in obj) {
-//       var elem = obj[key];
-//       context.push(key);
-//       createSchema2(elem, context, false);
-//       context.pop();
-//     }
-//   } else {
-//     context.registerSchema(Type.value, context.currentName());
-//   }
-//   return context.rootSchema;
-// }
-
-function createSchema(list) {
-  const ret = [];
-  for (var i = 0; i < list.length; i++) {
-    var obj = list[i];
-    for(var key in obj) {
-      if (ret.indexOf(key) < 0) {
-        ret.push(key);
-      }
-    }
-  }
-  ret.sort((a, b) => a > b ? -1 : 1);
-  console.log(ret);
-  return ret;
-}
 
 Vue.component('x-row', {
   props: ['h'],
@@ -639,75 +224,32 @@ Vue.component('x-panel', {
   },
 })
 
-var schema = {root: null};
 Vue.component('x-json', {
-  props: ['csvdata', 'w',],
+  props: ['w',],
   data: function() {
     return {
-      json: null,
+      // json: null,
       isTextareaFocused: true,
     }
   },
   template:`
 <x-panel title="JSON" :w="w" h="100%" v-on:mouseover="mouseover">
-  <textarea id="jsonTextarea" placeholder="JSON" :class="['json',]" v-if="showTextArea" v-model="json" @keyup.ctrl.65="ctrlA" @focus="isTextareaFocused = true" @blur="isTextareaFocused = false"></textarea>
+  <textarea id="jsonTextarea" placeholder="JSON" :class="['json',]" v-if="showTextArea" :value="json" @input="updateJsonStr" @focus="isTextareaFocused = true" @blur="isTextareaFocused = false"></textarea>
   <pre class="json" v-if="!showTextArea" @click="focusJsonTextarea"><code @click="isTextareaFocused = true">{{formattedJson}}</code></pre>
 </x-panel>
   `,
-  watch: {
-    json: function() {
-      if (this.csvdata) {
-
-        const testSchema = SuperFlatten.createSchema(this.jsonObject);
-        console.log(testSchema);
-
-        if (!schema.root) {
-          schema.root = testSchema;
-        }
-        console.log(schema.root);
-
-        const count = SuperFlatten.countSize(this.jsonObject, schema.root);
-        console.log(count);
-        schema.count = count;
-
-        this.csvdata.splice(0, this.csvdata.length);
-
-        var list = null;
-        if (Array.isArray(this.jsonObject)) {
-          list = this.jsonObject;
-        } else {
-          list = [this.jsonObject];
-        }
-
-        const value = SuperFlatten.superflatten(list, schema.root);
-        // console.log(value);
-        Array.prototype.push.apply(this.csvdata, value);
-      }
-    }
-  },
   computed: {
-    showTextArea: function() {
-      return this.isTextareaFocused || !this.isValidJson;
+    json: function() {
+      return this.$store.state.jsonStr;
     },
     jsonObject: function() {
-      try {
-
-        return JSON.parse(this.json);
-      } catch (exception) {
-        // no operation
-      }
+      return this.$store.getters.jsonObject;
     },
     isValidJson: function() {
-      if (this.json == null) {
-        return false;
-      }
-      try {
-        JSON.parse(this.json);
-        return true;
-      } catch (exception) {
-        console.log(exception);
-        return false;
-      }
+      return this.$store.getters.isValidJson;
+    },
+    showTextArea: function() {
+      return this.isTextareaFocused || !this.isValidJson;
     },
     formattedJson: function() {
       if (!this.isValidJson) {
@@ -736,8 +278,8 @@ Vue.component('x-json', {
     },
   },
   methods: {
-    ctrlA: function() {
-      // console.log('test');
+    updateJsonStr: function(e) {
+      this.$store.commit('updateJsonStr', e.target.value);
     },
     focusJsonTextarea: function() {
       this.isTextareaFocused = true;
@@ -751,18 +293,20 @@ Vue.component('x-json', {
   }
 })
 Vue.component('x-csv', {
-  props: ['csvdata'],
   template:`
-<x-table title="CSV" w="100%" h="100%" :data="csvdata" >
+<x-table title="CSV" w="100%" h="100%" :data='csvdata'>
   <a slot="footer" class="btn" style="position: absolute; z-index: 300; top: calc(100% - 80px); left: calc(50% - 100px); width: 150px; opacity: 0.7;" id="download" href="#" download="data.csv" @click="download">DOWNLOAD</a>
 </x-table>
   `,
   computed: {
-    schema: function() {
-      return createSchema(this.csvdata)
+    csvdata: function() {
+      return this.$store.getters.csvdata;
     },
     filteredData: function() {
       return this.csvdata.filter((element, index) => index < 8);
+    },
+    schema: function() {
+      return this.createTableHeader(this.csvdata)
     },
   },
   methods: {
@@ -788,13 +332,26 @@ Vue.component('x-csv', {
         ret.push('\r\n');
       });
       return ret;
+    },
+    createTableHeader: function(list) {
+      const ret = [];
+      for (var i = 0; i < list.length; i++) {
+        var obj = list[i];
+        for(var key in obj) {
+          if (ret.indexOf(key) < 0) {
+            ret.push(key);
+          }
+        }
+      }
+      ret.sort((a, b) => a > b ? -1 : 1);
+      return ret;
     }
   }
 })
 Vue.component('x-config', {
-  props: ['schema', 'count', 'w', 'h', 'mouseover'],
+  props: ['w', 'h',],
   template: `
-<x-panel title="Configuration" :w="w" :h="h" :mouseover="mouseover">
+<x-panel title="Configuration" :w="w" :h="h">
   <div style="height: 40px;">
     count: {{count}}
   </div>
@@ -802,7 +359,15 @@ Vue.component('x-config', {
     <x-config-treeview :schema="schema" isroot="true"></x-config-treeview>
   </div>
 </x-panel>
-  `
+  `,
+  computed: {
+    schema: function() {
+      return this.$store.state.jsonSchema;
+    },
+    count: function() {
+      return this.$store.getters.csvdataCount;
+    },
+  }
 })
 
 Vue.component('x-config-treeview', {
@@ -815,19 +380,19 @@ Vue.component('x-config-treeview', {
       </div>
       <div style="display: inline-block; width: 200px;" v-if="!isroot">
         <div v-if="type == 'object'" style="padding-bottom: 2px;">
-          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="schema.status = 'ON'">ON</button><!--
-          --><button class="status_button" :class="{active: schema.status == 'AS_LIST'}" @click="schema.status = 'AS_LIST'">AS LIST</button><!--
-          --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="schema.status = 'OFF'">OFF</button>
+          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="updateSchemaStatus(schema, 'ON')">ON</button><!--
+          --><button class="status_button" :class="{active: schema.status == 'AS_LIST'}" @click="updateSchemaStatus(schema, 'AS_LIST')">AS LIST</button><!--
+          --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="updateSchemaStatus(schema, 'OFF')">OFF</button>
         </div>
         <div v-if="type == 'list'" style="padding-bottom: 2px;">
-          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="schema.status = 'ON'">ON</button><!--
-          --><button class="status_button" :class="{active: schema.status == 'AS_OBJECT'}" @click="schema.status = 'AS_OBJECT'">AS OBJECT</button><!--
-          --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="schema.status = 'OFF'">OFF</button>
+          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="updateSchemaStatus(schema, 'ON')">ON</button><!--
+          --><button class="status_button" :class="{active: schema.status == 'AS_OBJECT'}" @click="updateSchemaStatus(schema, 'AS_OBJECT')">AS OBJECT</button><!--
+          --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="updateSchemaStatus(schema, 'OFF')">OFF</button>
         </div>
         <div v-if="type == 'value'" style="padding-bottom: 2px;">
-          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="schema.status = 'ON'">ON</button><!--
+          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="updateSchemaStatus(schema, 'ON')">ON</button><!--
           --><div style="display: inline-block; width: 66px;"></div><!--
-          --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="schema.status = 'OFF'">OFF</button>
+          --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="updateSchemaStatus(schema, 'OFF')">OFF</button>
         </div>
       </div>
     </div>
@@ -855,6 +420,9 @@ Vue.component('x-config-treeview', {
       }
       return (depth * 4) + "px";
     },
+    updateSchemaStatus: function(schema, status) {
+      this.$store.commit('updateSchemaStatus', {schema, status});
+    }
   },
   mounted: function() {
   }
@@ -1088,14 +656,70 @@ Vue.component('x-table', {
   }
 })
 
+const store = new Vuex.Store(
+  {
+    strict: true,
+    state:{
+      jsonStr: '',
+      // jsonObject: null,
+      jsonSchema: null,
+      // csvdata: [],
+      // csvdataCount: 0,
+    },
+    mutations: {
+      updateJsonStr: (state, jsonStr) => {
+        state.jsonStr = jsonStr;
+        state.jsonSchema = SuperFlatten.createSchema(store.getters.jsonObject);
+      },
+      updateSchemaStatus: (state, args) => {
+        args.schema.status = args.status;
+      },
+    },
+    getters: {
+      jsonObject: (state) => {
+        let jsonObject = null;
+        try {
+          jsonObject = JSON.parse(state.jsonStr);
+        } catch (exception) {
+          jsonObject = null;
+        }
+        return jsonObject;
+      },
+      csvdata: (state) => {
+        const jsonObject = store.getters.jsonObject;
+        var list = null;
+        if (jsonObject) {
+          if (Array.isArray(jsonObject)) {
+            list = jsonObject;
+          } else {
+            list = [jsonObject];
+          }
+        } else {
+          list = [];
+        }
+        return SuperFlatten.superflatten(list, state.jsonSchema);
+      },
+      csvdataCount: (state) => {
+        return SuperFlatten.countSize(store.getters.jsonObject, state.jsonSchema);
+      },
+      isValidJson: (state) => {
+        try {
+          JSON.parse(state.jsonStr);
+          return true;
+        } catch (exception) {
+          return false;
+        }
+      },
+    },
+  }
+)
 
 var app = new Vue({
   el: '#app',
+  store,
   data: {
-    csvdata: [],
     upperMiddleSeparatorOffset: {x: 0, y: 0},
     middleSeparatorOffset: {x: 0, y: 0},
-    schema,
   },
   computed: {
     leftPanelWidth: function() {
