@@ -661,22 +661,28 @@ const store = new Vuex.Store(
     strict: true,
     state:{
       jsonStr: '',
-      // jsonObject: null,
       jsonSchema: null,
-      // csvdata: [],
-      // csvdataCount: 0,
     },
     mutations: {
       updateJsonStr: (state, jsonStr) => {
         state.jsonStr = jsonStr;
-        if (!state.jsonSchema) {
-          state.jsonSchema = SuperFlatten.createSchema(store.getters.jsonObject);
+        const currentSchema = state.jsonSchema;
+        state.jsonSchema = SuperFlatten.createSchema(store.getters.jsonObject);
+        const copySchema = (fromSchema, toSchema) => {
+          if (!fromSchema || !toSchema) {
+            return;
+          }
+          toSchema.status = fromSchema.status;
+          for (key in fromSchema.getChildren()) {
+            const fromChild = fromSchema.getChild(key);
+            const toChild = toSchema.getChild(key);
+            copySchema(fromChild, toChild);
+          }
         }
+        copySchema(currentSchema, state.jsonSchema);
       },
       updateSchemaStatus: (state, args) => {
-        console.log(state);
         args.schema.status = args.status;
-        // state.jsonSchema.status = 'OFF';
       },
     },
     getters: {
@@ -689,18 +695,14 @@ const store = new Vuex.Store(
         }
         return jsonObject;
       },
+      renderable: (state) => {
+        return store.getters.csvdataCount < 100;
+      },
       csvdata: (state) => {
         const jsonObject = store.getters.jsonObject;
-        // var list = null;
-        // if (jsonObject) {
-        //   if (Array.isArray(jsonObject)) {
-        //     list = jsonObject;
-        //   } else {
-        //     list = [jsonObject];
-        //   }
-        // } else {
-        //   list = [];
-        // }
+        if (!store.getters.renderable) {
+          return [];
+        }
         return SuperFlatten.superflatten(jsonObject, state.jsonSchema);
       },
       csvdataCount: (state) => {

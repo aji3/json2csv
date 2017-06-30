@@ -13,8 +13,8 @@ var SuperFlatten = SuperFlatten || (function() {
       const schemaMap = {};
       const schemaConverter = function(schema) {
         schemaMap[schema.getContextName()] = schema;
-        for (const key in schema.children) {
-          const child = schema.children[key];
+        for (const key in schema.getChildren()) {
+          const child = schema.getChild(key);
           schemaConverter(child);
         }
       };
@@ -25,9 +25,9 @@ var SuperFlatten = SuperFlatten || (function() {
     p.getStatus = function(key) {
       // console.log(this.getCurrentName());
       if (!this.schemaMap) {
-        return 'ON';
+        return SuperFlattenStatus.on;
       }
-      return this.schemaMap[this.getCurrentName(key)] ? this.schemaMap[this.getCurrentName(key)].status : 'ON';
+      return this.schemaMap[this.getCurrentName(key)] ? this.schemaMap[this.getCurrentName(key)].status : SuperFlattenStatus.on;
     }
     p.getCurrentName = function(key) {
       let ret = "";
@@ -204,14 +204,15 @@ var SuperFlatten = SuperFlatten || (function() {
       if (schema) {
         context.setSchema(schema);
       }
+      const status = schema ? schema.status : SuperFlattenStatus.on;
       if (Array.isArray(obj)) {
         context.startChild(Type.list, '[]');
         superflattenList(obj, context);
-        context.endChild(Type.list, 'ON');
+        context.endChild(Type.list, status);
       } else if (typeof obj === 'object') {
         context.startChild(Type.object, '{}');
         superflattenObject(obj, context);
-        context.endChild(Type.object, 'ON');
+        context.endChild(Type.object, status);
       } else {
         context.root = [obj];
       }
@@ -223,6 +224,7 @@ var SuperFlatten = SuperFlatten || (function() {
         if (Array.isArray(obj)) {
           const name = '[]';
           const status = context.getStatus(name);
+          if (status === SuperFlattenStatus.list.off) continue;
           console.log(context.getCurrentName(name) + " - " + status);
           context.startChild(Type.list, name);
           superflattenList(obj, context);
@@ -230,12 +232,14 @@ var SuperFlatten = SuperFlatten || (function() {
         } else if (typeof obj === 'object') {
           const name = '{}';
           const status = context.getStatus(name);
+          if (status === SuperFlattenStatus.object.off) continue;
           console.log(context.getCurrentName(name) + " - " + status);
           context.startChild(Type.object, name);
           superflattenObject(obj, context);
           context.endChild(Type.object, status);
         } else {
           const status = context.getStatus();
+          if (status === SuperFlattenStatus.value.off) continue;
           console.log(context.getCurrentName() + " - " + status);
           context.addValue(null, obj);
         }
@@ -245,6 +249,7 @@ var SuperFlatten = SuperFlatten || (function() {
       for (const key in obj) {
         const value = obj[key];
         const status = context.getStatus(key);
+        if (status === SuperFlattenStatus.off) continue;
         console.log(context.getCurrentName(key) + " - " + status);
         if (Array.isArray(value)) {
           context.startChild(Type.list, key);
@@ -298,19 +303,21 @@ var SuperFlatten = SuperFlatten || (function() {
     value: 'value',
   }
   const SuperFlattenStatus = {
+    on: 'ON',
+    off: 'OFF',
     object: {
-      on: 'ON',
+      on: 'ON', // should be the same as SuperFlattenStatus.on
       asList: 'AS_LIST',
-      off: 'OFF'
+      off: 'OFF' // should be the same as SuperFlattenStatus.off
     },
     list: {
-      on: 'ON',
+      on: 'ON', // should be the same as SuperFlattenStatus.on
       asObject: 'AS_OBJECT',
-      off: 'OFF'
+      off: 'OFF' // should be the same as SuperFlattenStatus.off
     },
     value: {
-      on: 'ON',
-      off: 'OFF'
+      on: 'ON', // should be the same as SuperFlattenStatus.on
+      off: 'OFF' // should be the same as SuperFlattenStatus.off
     }
   }
 
@@ -321,20 +328,20 @@ var SuperFlatten = SuperFlatten || (function() {
       this.parent = null;
       this.children = {};
       this.listSize = 0;
-
-      switch (type) {
-        case 'object':
-          this.status = SuperFlattenStatus.object.on;
-          break;
-        case 'list':
-          this.status = SuperFlattenStatus.list.on;
-          break;
-        case 'value':
-          this.status = SuperFlattenStatus.value.on;
-          break;
-        default:
-          break;
-      }
+      this.status = SuperFlattenStatus.on;
+      // switch (type) {
+      //   case 'object':
+      //     this.status = SuperFlattenStatus.object.on;
+      //     break;
+      //   case 'list':
+      //     this.status = SuperFlattenStatus.list.on;
+      //     break;
+      //   case 'value':
+      //     this.status = SuperFlattenStatus.value.on;
+      //     break;
+      //   default:
+      //     break;
+      // }
     }
     const p = Schema.prototype;
     p.getParent = function() {
@@ -342,6 +349,9 @@ var SuperFlatten = SuperFlatten || (function() {
     }
     p.setParent = function(parent) {
       this.parent = parent;
+    }
+    p.getChildren = function() {
+      return this.children;
     }
     p.getChild = function(name) {
       return this.children[name];
@@ -447,6 +457,9 @@ var SuperFlatten = SuperFlatten || (function() {
       return count;
     }
     function countObjectSize(object, schema) {
+      if (!object || Object.keys(object).length == 0) {
+        return 0;
+      }
       const status = schema ? schema.status : SuperFlattenStatus.object.on;
       if (status === SuperFlattenStatus.object.off) {
         return 1;
