@@ -696,7 +696,7 @@ const store = new Vuex.Store(
         return jsonObject;
       },
       renderable: (state) => {
-        return store.getters.csvdataCount < 100;
+        return store.getters.csvdataCount < 10000;
       },
       csvdata: (state) => {
         const jsonObject = store.getters.jsonObject;

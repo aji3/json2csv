@@ -454,6 +454,7 @@ var SuperFlatten = SuperFlatten || (function() {
           }
         }
       }
+      schema.listSize = schema.listSize < count ? count : schema.listSize;
       return count;
     }
     function countObjectSize(object, schema) {
@@ -493,9 +494,17 @@ var SuperFlatten = SuperFlatten || (function() {
           }
         }
       }
+      schema.listSize = schema.listSize < count ? count : schema.listSize;
       return count;
     }
   }
 
-  return {superflatten, createSchema, countSize};
+  suggestSchema: {
+    var suggestSchema = function(object, schema, targetSize) {
+      const copiedSchema = JSON.parse(JSON.stringify(schema));
+      
+    }
+  }
+
+  return {superflatten, createSchema, countSize, suggestSchema};
 }());
