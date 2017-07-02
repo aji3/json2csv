@@ -172,7 +172,7 @@ table {
     <div style="height: 100% position: relative;">
       <x-row :h="'50% - ' + middleSeparatorOffset.y + 'px'">
         <x-json :w="leftPanelWidth" ></x-json>
-        <x-separator :offset="upperMiddleSeparatorOffset" direction="horizontal" :h="'50% - 18px - ' + middleSeparatorOffset.y + 'px'" w="5px" top="40px" left="70%"></x-separator>
+        <x-separator :offset="upperMiddleSeparatorOffset" direction="horizontal" :h="'50% - 18px - ' + middleSeparatorOffset.y + 'px'" w="5px" top="40px" left="60%"></x-separator>
         <x-config :w="rightPanelWidth" h="100%" ></x-config>
       </x-row>
       <x-row :h="'50% + ' + middleSeparatorOffset.y + 'px'">
@@ -205,7 +205,7 @@ Vue.component('x-panel', {
 <div :style="{position: 'relative', float: 'left', width, height, overflow: 'hidden'}" style="border: 1px solid #777; margin: 1px; border-radius: 5px; padding: 2px;" @mouseover="mouseover">
   <slot></slot>
   <div style="position: absolute; left: calc(100% - 200px); top: 15px; text-align: right; width: 190px;">
-    <label style="background-color: blue; opacity: 0.5; padding: 2px 10px; border-radius: 14px; color: white; user-select: none;">{{title}}</label>
+    <label style="background-color: #0275d8; opacity: 0.7; padding: 2px 10px; border-radius: 14px; color: white; user-select: none;">{{title}}</label>
   </div>
 </div>
   `,
@@ -351,9 +351,9 @@ Vue.component('x-csv', {
 Vue.component('x-config', {
   props: ['w', 'h',],
   template: `
-<x-panel title="Configuration" :w="w" :h="h">
+<x-panel title="Config" :w="w" :h="h">
   <div style="height: 40px;">
-    count: {{count}}
+    Count: {{count}} / Default: {{defaultCount}}
   </div>
   <div style="width: 100%; height: calc(100% - 40px); overflow: scroll; ">
     <x-config-treeview :schema="schema" isroot="true"></x-config-treeview>
@@ -367,32 +367,35 @@ Vue.component('x-config', {
     count: function() {
       return this.$store.getters.csvdataCount;
     },
+    defaultCount: function() {
+      return this.$store.state.defaultCsvdataCount;
+    },
   }
 })
 
 Vue.component('x-config-treeview', {
   props: ['schema', 'isroot'],
   template: `
-  <div :style="{border: 'none', 'margin-left': indent(schema)}">
-    <div style="background-color: white; margin: 2px 0 0px 0; box-shadow: 5px 5px 5px rgba(0,0,0,0.4); background-color: azure;">
-      <div style="display: inline-block; width: calc(100% - 205px); overflow: hidden; min-width: 100px; height: 20px;" v-if="name">
-        <span style="">{{name}}</span>: <span style="font-weight: bold;">{{type}}</span>
+  <div :style="{border: 'none', 'margin-left': isroot ? '0px' : '8px'}">
+    <div style="display: flex; background-color: white; margin: 3px 0 0px 0; box-shadow: 5px 5px 5px rgba(0,0,0,0.4); background-color: azure;">
+      <div style="display: inline-block; width: calc(100% - 215px); overflow: hidden; min-width: 100px; height: 20px;">
+        <span style="border-left: 3px solid #01478D; padding-left: 3px;" v-if="name && name !== '_sfvalue'">{{name}}:</span> <span style="font-weight: bold;">{{type}}</span>
       </div>
-      <div style="display: inline-block; width: 200px;">
-        <div v-if="type == 'object'" style="padding-bottom: 2px;">
-          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="updateSchemaStatus(schema, 'ON')">ON</button><!--
-          --><button class="status_button" :class="{active: schema.status == 'AS_LIST'}" @click="updateSchemaStatus(schema, 'AS_LIST')">AS LIST</button><!--
-          --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="updateSchemaStatus(schema, 'OFF')">OFF</button>
+      <div style="display: inline-block; width: 210px; height: 20px; overflow: hidden;">
+        <div v-if="type == 'object'" style="padding-bottom: 2px; width: 210px;">
+          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="updateSchemaStatus(schema, 'ON')">ON</button>
+          <button class="status_button" :class="{active: schema.status == 'AS_LIST'}" @click="updateSchemaStatus(schema, 'AS_LIST')">AS LIST</button>
+          <button class="status_button" :class="{active: schema.status == 'OFF'}" @click="updateSchemaStatus(schema, 'OFF')">OFF</button>
         </div>
-        <div v-if="type == 'list'" style="padding-bottom: 2px;">
-          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="updateSchemaStatus(schema, 'ON')">ON</button><!--
-          --><button class="status_button" :class="{active: schema.status == 'AS_OBJECT'}" @click="updateSchemaStatus(schema, 'AS_OBJECT')">AS OBJECT</button><!--
-          --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="updateSchemaStatus(schema, 'OFF')">OFF</button>
+        <div v-if="type == 'list'" style="padding-bottom: 2px; width: 210px;">
+          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="updateSchemaStatus(schema, 'ON')">ON</button>
+          <button class="status_button" :class="{active: schema.status == 'AS_OBJECT'}" @click="updateSchemaStatus(schema, 'AS_OBJECT')">AS OBJECT</button>
+          <button class="status_button" :class="{active: schema.status == 'OFF'}" @click="updateSchemaStatus(schema, 'OFF')">OFF</button>
         </div>
-        <div v-if="type == 'value'" style="padding-bottom: 2px;">
-          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="updateSchemaStatus(schema, 'ON')">ON</button><!--
-          --><div style="display: inline-block; width: 66px;"></div><!--
-          --><button class="status_button" :class="{active: schema.status == 'OFF'}" @click="updateSchemaStatus(schema, 'OFF')">OFF</button>
+        <div v-if="type == 'value'" style="padding-bottom: 2px; width: 210px;">
+          <button class="status_button" :class="{active: schema.status == 'ON'}" @click="updateSchemaStatus(schema, 'ON')">ON</button>
+          <div style="display: inline-block; width: 66px;"></div>
+          <button class="status_button" :class="{active: schema.status == 'OFF'}" @click="updateSchemaStatus(schema, 'OFF')">OFF</button>
         </div>
       </div>
     </div>
@@ -411,15 +414,6 @@ Vue.component('x-config-treeview', {
     },
   },
   methods: {
-    indent: function(elem) {
-      if (elem == null) return 0;
-      var depth = 0;
-      while(elem.parent != null) {
-        var elem = elem.parent;
-        depth++;
-      }
-      return (depth * 4) + "px";
-    },
     updateSchemaStatus: function(schema, status) {
       this.$store.commit('updateSchemaStatus', {schema, status});
     }
@@ -527,7 +521,7 @@ Vue.component('x-table', {
           <table class="datatable">
             <thead>
               <tr role="row">
-                <th v-for="prop in properties" >{{prop.key}}</th>
+                <th v-for="prop in properties" :title="prop.key">{{prop.key}}</th>
               </tr>
             </thead>
             <tbody>
@@ -662,12 +656,14 @@ const store = new Vuex.Store(
     state:{
       jsonStr: '',
       jsonSchema: null,
+      defaultCsvdataCount: 0,
     },
     mutations: {
       updateJsonStr: (state, jsonStr) => {
         state.jsonStr = jsonStr;
         const currentSchema = state.jsonSchema;
         state.jsonSchema = SuperFlatten.createSchema(store.getters.jsonObject);
+        state.defaultCsvdataCount = SuperFlatten.countSize(store.getters.jsonObject, state.jsonSchema);
         const copySchema = (fromSchema, toSchema) => {
           if (!fromSchema || !toSchema) {
             return;
@@ -729,10 +725,10 @@ var app = new Vue({
   },
   computed: {
     leftPanelWidth: function() {
-      return `70% - ${this.upperMiddleSeparatorOffset.x}px`;
+      return `60% - ${this.upperMiddleSeparatorOffset.x}px`;
     },
     rightPanelWidth: function() {
-      return `30% + ${this.upperMiddleSeparatorOffset.x}px`;
+      return `40% + ${this.upperMiddleSeparatorOffset.x}px`;
     },
     topHight: function() {
       return '50% - 20px';

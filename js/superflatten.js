@@ -238,7 +238,7 @@ var SuperFlatten = SuperFlatten || (function() {
           superflattenObject(obj, context);
           context.endChild(Type.object, status);
         } else {
-          const status = context.getStatus();
+          const status = context.getStatus('_sfvalue');
           if (status === SuperFlattenStatus.value.off) continue;
           console.log(context.getCurrentName() + " - " + status);
           context.addValue(null, obj);
@@ -291,7 +291,7 @@ var SuperFlatten = SuperFlatten || (function() {
       this.currentSchema = this.currentSchema.getParent();
     }
     p.addValue = function(key, value) {
-      this.currentSchema.addChild(new Schema(Type.value, key));
+      this.currentSchema.addChild(new Schema(Type.value, key ? key : '_sfvalue'));
     }
     p.applyResult = function(list) {
     }
@@ -376,7 +376,7 @@ var SuperFlatten = SuperFlatten || (function() {
         if (contextName.length > 0) {
           contextName = '.' + contextName;
         }
-        contextName = obj.name + contextName;
+        contextName = (obj.name ? obj.name : '_sfvalue') + contextName;
         if (obj.getParent() && obj.getParent().name !== '#root') {
           obj = obj.getParent();
         } else {
@@ -449,7 +449,8 @@ var SuperFlatten = SuperFlatten || (function() {
           const childSchema = schema ? schema.getChild('{}') : null;
           count += countObjectSize(obj, childSchema);
         } else {
-          if (status === SuperFlattenStatus.list.on) {
+          const childSchema = schema ? schema.getChild('_sfvalue') : null;
+          if (childSchema && childSchema.status === SuperFlattenStatus.list.on) {
             count++;
           }
         }
@@ -458,12 +459,9 @@ var SuperFlatten = SuperFlatten || (function() {
       return count;
     }
     function countObjectSize(object, schema) {
-      if (!object || Object.keys(object).length == 0) {
-        return 0;
-      }
       const status = schema ? schema.status : SuperFlattenStatus.object.on;
-      if (status === SuperFlattenStatus.object.off) {
-        return 1;
+      if (!object || Object.keys(object).length == 0 || status === SuperFlattenStatus.object.off) {
+        return 0;
       }
       let count = 1;
       if (status === SuperFlattenStatus.object.asList){
@@ -502,7 +500,7 @@ var SuperFlatten = SuperFlatten || (function() {
   suggestSchema: {
     var suggestSchema = function(object, schema, targetSize) {
       const copiedSchema = JSON.parse(JSON.stringify(schema));
-      
+
     }
   }
 
