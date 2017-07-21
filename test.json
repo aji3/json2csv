@@ -1,0 +1,486 @@
+OK??
+{
+  "test":[
+    [{"aa": "valueaa1",
+      "bb": "valuebb2"}],
+    [{"aa": "valueaa3",
+      "bb": "valuebb4"}],
+    [{"aa": "valueaa5",
+      "bb": "valuebb6"}]
+  ],
+  "test2":[
+    [{"aa": "valueaa7",
+      "bb": "valuebb8"}],
+    [{"aa": "valueaa9",
+      "bb": "valuebb10"}],
+    [{"aa": "valueaa11",
+      "bb": "valuebb12"}]
+  ],
+  "test3":[
+    [{"aa": "valueaa13",
+      "bb": "valuebb14"}],
+    [{"aa": "valueaa15",
+      "bb": "valuebb16"}],
+    [{"aa": "valueaa17",
+      "bb": "valuebb18"}]
+  ],
+  "test4":[
+    [{"aa": "valueaa19",
+      "bb": "valuebb20"}],
+    [{"aa": "valueaa21",
+      "bb": "valuebb22"}],
+    [{"aa": "valueaa23",
+      "bb": "valuebb24",
+      "cc": {
+        "dd": ["ee25", "ff26"]
+      }}]
+  ],
+  "test5":[
+    [{"aa": "valueaa27",
+      "bb": "valuebb28"}],
+    [{"aa": "valueaa29",
+      "bb": "valuebb30"}],
+    [{"aa": "valueaa31",
+      "bb": "valuebb32",
+      "cc": {
+        "dd": ["ee33", "ff34"]
+      }}]
+  ],
+  "test6":{
+    "bb": {
+      "cc": {
+        "dd": "ee35",
+        "ff": true
+      }
+    }
+  },
+  "test7":{
+    "bb": {
+      "cc": {
+        "dd": "ee36",
+        "ff": true
+      }
+    }
+  },
+  "test8": {},
+  "test9":[1,2,3,4,5,6,7,8,9,10],
+  "test10":[1,2,3,4,5,6,7,8,9,10],
+  "test11":[1,2,3,4,5,6,7,8,9,10]
+}
+
+test[]
+test[].aa
+test[].bb
+test2[]
+test2[].aa
+test2[].bb
+
+
+{
+  "test5":[
+    [{"aa": "valueaa31",
+      "bb": "valuebb32",
+      "cc": {
+        "dd": ["ee33", "ff34"]
+      }}]
+  ]
+}
+
+[
+{
+  "test5":[
+    [{"aa": "valueaa31",
+      "bb": "valuebb32",
+      "cc": {
+        "dd": ["ee33", "ff34"]
+      }}]
+  ]
+}
+]
+
+-------------------------------
+
+{
+  "test":[
+    [{"aa": "valueaa",
+      "bb": "valuebb"}]
+  ],
+  "test6":{
+    "aa": [1, 2, 3, 4],
+    "bb": {
+      "cc": {
+        "dd": "ee",
+        "ff": true
+      }
+    }
+  }
+}
+
+
+
+{
+  "test":[
+    [{"aa": "vaclue1aaa",
+      "bb": "valsae1bb"},
+     {"aa": "tesdsxat",
+      "bb": "testz2"}],
+    [{"aa": "valuaea2aa",
+      "bb": "valude2zsdsbsb"}],
+    [{"aa": "valu6zed3aa",
+      "bb": "valued3bb"}]
+  ]
+}
+
+test[].[] - asObject 
+
+test[].[].aa -> test[].0.aa
+test[].[].bb -> test[].0.bb
+test[].[].aa -> test[].1.aa
+test[].[].bb -> test[].1.bb
+
+test[].0.aa
+test[].0.bb
+test[].1.aa
+test[].1.bb
+test[].0.aa
+test[].0.bb
+test[].0.aa
+test[].0.bb
+
+
+-------------------------------
+List of values
+
+[
+  1,
+  2,
+  3,
+  4
+]
+
+[]
+
+-------------------------------
+List of lists
+
+[
+  [{"aa": "bb",
+    "cc": "dd"},
+   {"aa": "bb2",
+    "cc": "dd2"}
+    ],
+  [{"aa": "bb"}],
+  [{"aa": "bb"}]
+]
+
+[]
+[].[]
+[].[].aa
+
+-------------------------------
+
+[
+  ["1", "11"],
+  ["2", "22"],
+  ["3", "33"]
+]
+
+-------------------------------
+List of objects
+
+{
+  "aa": "bb",
+  "list":[
+    {
+      "cc": "dd",
+      "ee": "ff"
+    },
+    {
+      "cc": "dd2",
+      "ee": "ff2"
+    }
+  ]
+}
+
+
+{
+  "aa": "bb",
+  "list":[
+    {
+      "cc": "dd",
+      "ee": {
+        "ff": "gg1",
+        "hh": "ii1"
+      }
+    },
+    {
+      "cc": "dd2",
+      "ee": {
+        "ff": "gg2",
+        "hh": "ii2"
+      }
+    }
+  ]
+}
+
+
+{
+  "aa": "bb",
+  "list":[
+    {
+      "cc": "dd",
+      "ee": {
+        "ff": ["gg11", "gg12"],
+        "hh": ["ii11", "ii12"]
+      }
+    },
+    {
+      "cc": "dd2",
+      "ee": {
+        "ff": ["gg21", "gg22"],
+        "hh": ["ii21", "ii22"]
+      }
+    }
+  ]
+}
+
+{
+  "aa": "bb",
+  "list":[
+    {
+      "cc": "dd",
+      "ee": {
+        "ff": [
+          {"aa": "gg11"},
+          {"aa": "gg12"}
+        ],
+        "hh": [
+          {"bb": "ii11"}, 
+          {"bb": "ii12"}
+        ]
+      }
+    },
+    {
+      "cc": "dd2",
+      "ee": {
+        "ff": [
+          {"aa": "gg21"},
+          {"aa": "gg22"}
+        ],
+        "hh": [
+          {"bb": "ii21"}, 
+          {"bb": "ii22"}
+        ]
+      }
+    }
+  ]
+}
+
+aa
+list[]
+list[].cc
+list[].ee
+
+
+
+{
+"test":
+  {
+  "aaa": 
+    {
+      "name": "AAAA", 
+      "age": 30
+    },
+  "bbb":
+    {
+      "name": "BBBB",
+      "age": 35
+    }
+  }
+}
+
+{
+  "test": [
+    {
+      "_id": "aaa",
+      "name": "AAAA", 
+      "age": 30
+    },
+    {
+      "_id": "bbb",
+      "name": "BBBB",
+      "age": 35
+    }
+  ]
+}
+
+-------------------------------
+List of list
+
+{
+  "aa": "bb",
+  "list":[
+    [
+      1, 11
+    ],
+    [
+      2, 22
+    ]
+  ]
+}
+
+aa
+list[]
+list[].[]
+
+
+-------------------------------
+List of value
+
+{
+  "aa": "bb",
+  "list":[
+      1, 
+      11,
+      2, 
+      22
+  ]
+}
+
+aa
+list[]
+
+
+-------------------------------
+OK
+[
+  {"aa": "bb"},
+  {"aa": "bb"},
+  {"aa": "bb"},
+  {"aa": "bb"}
+]
+
+-------------------------------
+
+{
+  "aa": {
+    "bb": {
+      "cc": "cccvalue"
+    }
+  }
+}
+
+-------------------------------
+
+{
+  "aa": {
+    "bb": {
+      "cc": "cccvalue",
+      "dd": [1, 2, 3]
+    }
+  }
+}
+
+-------------------------------
+
+{
+  "aa": {
+    "bb": {
+      "cc": "cccvalue",
+      "dd": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    }
+  }
+}
+
+
+
+{
+  "list1":[
+    {
+      "cc1": "dd",
+      "ee1": "ff"
+    },
+    {
+      "cc1": "dd2",
+      "ee1": "ff2"
+    }
+  ],
+  "list2":[
+    {
+      "cc2": "dd",
+      "ee2": "ff"
+    },
+    {
+      "cc2": "dd2",
+      "ee2": "ff2"
+    },
+    {
+      "cc2": "dd3",
+      "ee2": "ff3"
+    }
+  ]
+}
+
+{
+  "list1":[
+    {
+      "cc1": "dd",
+      "ee1": "ff"
+    },
+    {
+      "cc1": "dd2",
+      "ee1": "ff2"
+    }
+  ],
+  "list2":[
+    {
+      "cc1": "dd",
+      "ee1": "ff",
+      "gg" : "hh"
+    },
+    {
+      "cc1": "dd2",
+      "ee1": "ff2"
+    },
+    {
+      "cc1": "dd3",
+      "ee1": "ff3"
+    }
+  ]
+}
+
+{
+  "test":[
+    [{"aa": "valueaa",
+      "bb": "valuebb"}],
+    [{"aa": "valueaa2",
+      "bb": "valuebb2"}],
+    [{"aa": "valueaa3",
+      "bb": "valuebb4"}]
+  ]
+}
+
+{
+  "test":[
+    [{"aa": "valueaa",
+      "bb": "valuebb"},
+      {"aa": "valueaa2",
+      "bb": "valuebb2"}],
+    [{"aa": "valueaa2",
+      "bb": "valuebb2"}],
+    [{"bb": "valueaa3",
+      "cc": "valuebb4"}]
+  ]
+}
+
+{
+  "test":[
+    {"aa": "valueaa",
+      "bb": "valuebb"},
+    {"aa": "valueaa2",
+      "bb": "valuebb2"},
+    {"aa": "valueaa3",
+      "bb": "valuebb4"}
+  ]
+}
+
