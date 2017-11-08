@@ -98,7 +98,7 @@ var SuperFlatten = SuperFlatten || (function() {
         const tmpList = [];
         list.forEach((elem) => {
           if (Array.isArray(elem)) {
-            Array.prototype.push.apply(tmpList, elem)
+            Array.prototype.push.apply(tmpList, elem);
           } else {
             tmpList.push(elem);
           }
@@ -125,7 +125,7 @@ var SuperFlatten = SuperFlatten || (function() {
     p.endObject = function(forcedToBeObject) {
       const list = this.values.pop();
       if (forcedToBeObject) {
-        // The object is forcedToBeObject means that it is originally a list but the superflatten result should be converted to object.
+        // The value of "forcedToBeObject" to be true means that it is originally a list but the superflatten result should be converted to object.
         // The object which is originally came from a list has items with name of xxx[].aaa, xxx[].bbb, etc.
         // To force it to be object, this name should be converted to xxx.0.aaa, xxx.0.bbb, xxx.1.aaa, xxx.1.bbb, etc.
         const currentName = this.getCurrentName();
@@ -148,8 +148,17 @@ var SuperFlatten = SuperFlatten || (function() {
         }
       }
       let resultList = [];
+      for (let i = 0; i < list.length; i++) {
+        let obj = list[i];
+        if (Array.isArray(obj) && obj.length >= 2) {
+          Array.prototype.push.apply(resultList, obj);
+        }
+      }
       for (var i = 0; i < list.length; i++) {
         let obj = list[i];
+        if (Array.isArray(obj) && obj.length >= 2) {
+          continue;
+        }
         const layerResultList = [];
         if (Array.isArray(obj)) {
           for (var j = 0; j < obj.length; j++) {
