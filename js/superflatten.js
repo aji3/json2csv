@@ -489,9 +489,16 @@ var SuperFlatten = SuperFlatten || (function() {
             tmp++;
           }
         }
-        if (tmp != 0) {
+        if (tmp > 0) {
           if (status === SuperFlattenStatus.object.on) {
-            count *= tmp;
+            if (tmp === 1) {
+              if (count === 0) {
+                count = 1;
+              }
+            } else {
+              count += tmp;
+            }
+            // count *= tmp;
           } else if (status === SuperFlattenStatus.object.asList){
             count += tmp;
           } else if (status === SuperFlattenStatus.object.off){
